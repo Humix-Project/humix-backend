@@ -1,6 +1,6 @@
 services:
   # 1. MariaDB (데이터베이스)
-  wagle-db:
+  humix-db:
     image: mariadb:10.11
     container_name: humix-mariadb
     restart: always
