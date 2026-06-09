@@ -1,6 +1,6 @@
 package com.humix.api.global.apiPayload.exception;
 
-import com.waglewagle.server.global.apiPayload.code.BaseErrorCode;
+import com.humix.api.global.apiPayload.code.BaseErrorCode;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
