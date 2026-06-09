@@ -12,3 +12,9 @@ spring:
     properties:
       hibernate:
         format_sql: true
+
+jwt:
+  token:
+    secret-key: vmfkdnj1234vmfkdnj1234vmfkdnj1234vmfkdnj1234
+    expiration:
+      access: 604800000        # 7일
