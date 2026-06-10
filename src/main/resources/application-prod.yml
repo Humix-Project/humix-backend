@@ -1,0 +1,32 @@
+spring:
+  datasource:
+    driver-class-name: org.mariadb.jdbc.Driver
+    url: jdbc:mariadb://humix-db:3306/humix
+    username: root
+    password: root
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  servlet:
+    multipart:
+      max-file-size: 50MB      # 음성파일 크기에 맞게 조정
+      max-request-size: 50MB
+
+cloud:
+  aws:
+    s3:
+      bucket: aws-humix-server-s3
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false               # EC2 환경에서 필수
+
+jwt:
+  token:
+    secret-key: vmfkdnj1234vmfkdnj1234vmfkdnj1234vmfkdnj1234
+    expiration:
+      access: 604800000
+
+cors:
+  allowed-origins: "https://humix.my-project.cloud,https://humix-client.vercel.app"  # EC2 퍼블릭, 버셀 도메인
