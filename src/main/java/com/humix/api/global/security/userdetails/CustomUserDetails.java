@@ -1,6 +1,6 @@
 package com.humix.api.global.security.userdetails;
 
-import com.humix.api.domain.Member.entity.Member;
+import com.humix.api.domain.member.entity.Member;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;

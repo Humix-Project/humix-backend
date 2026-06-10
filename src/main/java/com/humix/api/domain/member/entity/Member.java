@@ -1,4 +1,4 @@
-package com.humix.api.domain.Member.entity;
+package com.humix.api.domain.member.entity;
 
 import jakarta.persistence.*;
 import lombok.*;

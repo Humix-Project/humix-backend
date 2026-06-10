@@ -1,6 +1,6 @@
-package com.humix.api.domain.Humming.entity;
+package com.humix.api.domain.humming.entity;
 
-import com.humix.api.domain.Member.entity.Member;
+import com.humix.api.domain.member.entity.Member;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;

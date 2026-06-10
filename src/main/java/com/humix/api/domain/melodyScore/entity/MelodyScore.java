@@ -1,6 +1,6 @@
-package com.humix.api.domain.MelodyScore.entity;
+package com.humix.api.domain.melodyScore.entity;
 
-import com.humix.api.domain.Humming.entity.Humming;
+import com.humix.api.domain.humming.entity.Humming;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.LastModifiedDate;

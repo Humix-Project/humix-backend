@@ -1,8 +1,8 @@
-package com.humix.api.domain.MusicGeneration.entity;
+package com.humix.api.domain.musicGeneration.entity;
 
-import com.humix.api.domain.MelodyScore.entity.MelodyScore;
-import com.humix.api.domain.Member.entity.Member;
-import com.humix.api.domain.MusicGeneration.type.GenerationStatus;
+import com.humix.api.domain.melodyScore.entity.MelodyScore;
+import com.humix.api.domain.member.entity.Member;
+import com.humix.api.domain.musicGeneration.type.GenerationStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.data.annotation.CreatedDate;

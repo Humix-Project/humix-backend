@@ -1,7 +1,7 @@
 package com.humix.api.global.security.userdetails;
 
-import com.humix.api.domain.Member.entity.Member;
-import com.humix.api.domain.Member.repository.MemberRepository;
+import com.humix.api.domain.member.entity.Member;
+import com.humix.api.domain.member.repository.MemberRepository;
 import com.humix.api.global.apiPayload.code.GeneralErrorCode;
 import com.humix.api.global.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
