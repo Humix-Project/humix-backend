@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.humix.api.global.apiPayload.code.BaseErrorCode;
 import com.humix.api.global.apiPayload.code.BaseSuccessCode;
+import com.humix.api.global.apiPayload.dto.PageResponseDTO;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -32,12 +33,18 @@ public class ApiResponse<T> {
     @JsonProperty("result")
     private T result;
 
-    // 성공 응답
+    // 성공 응답 (단일 객체)
     public static <T> ApiResponse<T> onSuccess(BaseSuccessCode code, T result) {
         return new ApiResponse<>(true, code.getCode(), code.getMessage(), result);
+    }
+
+    // 페이징 성공 응답 (Page 객체 처리)
+    public static <T> ApiResponse<PageResponseDTO<T>> onPageSuccess(BaseSuccessCode code, Page<T> page) {
+        return new ApiResponse<>(true, code.getCode(), code.getMessage(), new PageResponseDTO<>(page));
     }
 
     // 실패 응답
     public static <T> ApiResponse<T> onFailure(BaseErrorCode code, T result) {
         return new ApiResponse<>(false, code.getCode(), code.getMessage(), result);
-    }}
+    }
+}
