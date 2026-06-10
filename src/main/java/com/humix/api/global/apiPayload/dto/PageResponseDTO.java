@@ -15,7 +15,7 @@ public class PageResponseDTO<T> {
     private final Integer currentPage;
     private final Integer totalPages;
     private final Integer currentCount;
-    private final List<T> content;
+    private final List<T> contents;
 
     public PageResponseDTO(Page<T> page) {
         this.totalCount = page.getTotalElements();
@@ -23,6 +23,6 @@ public class PageResponseDTO<T> {
         this.currentPage = page.getNumber() + 1;
         this.totalPages = page.getTotalPages();
         this.currentCount = page.getNumberOfElements();
-        this.content = page.getContent();
+        this.contents = page.getContent();
     }
 }
