@@ -1,0 +1,12 @@
+spring:
+  application:
+    name: api
+
+  profiles:
+    active: local # 기본적으로 local 환경으로 실행하도록 설정
+    group:
+      local: local
+      dev: dev
+
+cors:
+  allowed-origins: "http://localhost:3000,http://127.0.0.1:3000"
