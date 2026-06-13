@@ -1,6 +1,9 @@
 package com.humix.api.domain.humming.dto;
+
 import com.fasterxml.jackson.annotation.JsonProperty;
-import java.time.OffsetDateTime;
+import com.humix.api.domain.humming.entity.Humming;
+import com.humix.api.domain.member.entity.Member;
+import java.time.LocalDateTime;
 
 public class HummingDTO {
 
@@ -21,13 +24,30 @@ public class HummingDTO {
     public record HummingSaveRequest(
             @JsonProperty("file_key") String fileKey,
             @JsonProperty("duration_seconds") int durationSeconds
-    ) {}
+    ) {
+        public Humming from(Member member, String s3FileUrl) {
+            return Humming.builder()
+                    .member(member)
+                    .s3FileUrl(s3FileUrl)
+                    .durationSeconds(this.durationSeconds)
+                    .build();
+        }
+    }
 
     //허밍 정보 저장 응답 Response
     public record HummingSaveResponse(
             @JsonProperty("humming_id") Long hummingId,
             @JsonProperty("file_url") String fileUrl,
             @JsonProperty("duration_seconds") int durationSeconds,
-            @JsonProperty("created_at") OffsetDateTime createdAt
-    ) {}
+            @JsonProperty("created_at") LocalDateTime createdAt
+    ) {
+        public static HummingSaveResponse from(Humming humming) {
+            return new HummingSaveResponse(
+                    humming.getId(),
+                    humming.getS3FileUrl(),
+                    humming.getDurationSeconds(),
+                    humming.getCreatedAt()
+            );
+        }
+    }
 }
