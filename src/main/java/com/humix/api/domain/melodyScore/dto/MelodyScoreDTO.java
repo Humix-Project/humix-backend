@@ -23,7 +23,7 @@ public class MelodyScoreDTO {
             @JsonProperty("humming_id") Long hummingId,
             List<NoteDto> notes
     ) {
-        public MelodyScore toEntity(Humming humming) {
+        public MelodyScore from(Humming humming) {
 
             try {
                 String jsonNotesData = objectMapper.writeValueAsString(this.notes);
