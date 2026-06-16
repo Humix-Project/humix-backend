@@ -10,3 +10,8 @@ spring:
 
 cors:
   allowed-origins: "http://localhost:3000,http://127.0.0.1:3000"
+
+ai:
+  server:
+    # 로컬 도커 컴포즈로 돌릴 때는 http://humix-ai:8000 이 들어갑니다.
+    url: ${AI_SERVER_URL:http://localhost:8000}

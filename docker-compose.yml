@@ -1,0 +1,35 @@
+networks:
+  humix-network:
+    driver: bridge
+
+services:
+  humix-db:
+    image: mariadb:latest
+    container_name: humix-db
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: humix
+    ports:
+      - "3306:3306"
+    networks:
+      - humix-network
+    healthcheck:
+      test: [ "CMD", "healthcheck.sh", "--connect", "--innodb_initialized" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  humix-backend:
+    build: .
+    container_name: humix-backend
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://humix-db:3306/humix
+      - AI_SERVER_URL=https://RunPod주소         # RunPod 엔드포인트로 교체
+    depends_on:
+      humix-db:
+        condition: service_healthy    # DB 준비 후 스프링을 띄울 것
+    networks:
+      - humix-network
