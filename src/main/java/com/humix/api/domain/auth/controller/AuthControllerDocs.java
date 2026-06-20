@@ -1,11 +1,14 @@
 package com.humix.api.domain.auth.controller;
 
+import com.humix.api.domain.member.dto.MemberDTO;
 import com.humix.api.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,7 +25,8 @@ public interface AuthControllerDocs {
                                     value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":null}")))
     })
     @PostMapping("/guest-login")
-    ApiResponse<Object> guestLogin(@RequestBody Object request);
+    ApiResponse<MemberDTO.MemberResponse> guestLogin(@RequestBody MemberDTO.MemberRequest request,
+                                                     HttpServletResponse response);
 
     @Operation(summary = "토큰 재발급(Silent Refresh) API", description = "쿠키에 저장된 Refresh Token을 사용해 Access Token을 재발급합니다.")
     @ApiResponses({
@@ -33,5 +37,7 @@ public interface AuthControllerDocs {
                                     value = "{\"isSuccess\":false, \"code\":\"AUTH401\", \"message\":\"리프레시 토큰이 만료되었습니다. 다시 로그인해주세요.\", \"result\":null}")))
     })
     @PostMapping("/silent-refresh")
-    ApiResponse<Object> silentRefresh();
+    ApiResponse<MemberDTO.MemberResponse> silentRefresh(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse response);
 }

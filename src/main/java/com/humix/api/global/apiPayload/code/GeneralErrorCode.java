@@ -17,6 +17,7 @@ public enum GeneralErrorCode implements BaseErrorCode{
 
     // AUTH 관련 에러
     LOGIN_REQUIRED(HttpStatus.UNAUTHORIZED, "AUTH4000", "로그인이 필요한 기능입니다."),
+    REFRESH_TOKEN_EXPIRES(HttpStatus.UNAUTHORIZED, "AUTH4001", "리프레시 토큰이 만료되었습니다. 다시 로그인해주세요."),
 
     // MEMBER 관련 에러
     MEMBER_NOT_FOUND(HttpStatus.BAD_REQUEST, "MEMBER4000", "해당하는 사용자가 존재하지 않습니다.");

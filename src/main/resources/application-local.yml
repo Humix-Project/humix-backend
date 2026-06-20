@@ -17,4 +17,8 @@ jwt:
   token:
     secret-key: vmfkdnj1234vmfkdnj1234vmfkdnj1234vmfkdnj1234
     expiration:
-      access: 604800000        # 7일
+      access: 1800000          # 30분 (30 * 60 * 1000)
+      refresh: 604800000        # 7일 (7 * 24 * 60 * 60 * 1000)
+  cookie:
+    secure: false
+    same-site: Lax
