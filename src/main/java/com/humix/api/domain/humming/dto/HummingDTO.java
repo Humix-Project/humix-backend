@@ -7,24 +7,6 @@ import com.humix.api.domain.member.entity.Member;
 import java.time.LocalDateTime;
 
 public class HummingDTO {
-
-    //Presigned URL 발급 요청 Request
-    public record AudioPresignedRequest(
-            @JsonProperty("audio_name") String audioName,
-            @JsonProperty("content_type") String contentType,
-            String usage
-    ) {}
-
-    //Presigned URL 발급 응답 Response
-    public record AudioPresignedResponse(
-            @JsonProperty("presigned_url") String presignedUrl,
-            @JsonProperty("file_key") String fileKey
-    ) {
-        public static AudioPresignedResponse from(String presignedUrl, String fileKey) {
-            return new AudioPresignedResponse(presignedUrl, fileKey);
-        }
-    }
-
     //허밍 정보 저장 요청 Request
     public record HummingSaveRequest(
             @JsonProperty("file_key") String fileKey,
