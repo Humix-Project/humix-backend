@@ -1,12 +1,10 @@
 package com.humix.api.domain.humming.controller;
 
-import com.humix.api.domain.humming.dto.HummingDTO;
 import com.humix.api.domain.humming.service.HummingService;
 import com.humix.api.domain.melodyScore.dto.MelodyScoreDTO;
 import com.humix.api.global.apiPayload.ApiResponse;
 import com.humix.api.global.apiPayload.code.GeneralSuccessCode;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
