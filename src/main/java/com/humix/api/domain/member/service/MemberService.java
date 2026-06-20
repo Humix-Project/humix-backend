@@ -3,6 +3,8 @@ package com.humix.api.domain.member.service;
 import com.humix.api.domain.member.dto.MemberDTO;
 import com.humix.api.domain.member.entity.Member;
 import com.humix.api.domain.member.repository.MemberRepository;
+import com.humix.api.global.apiPayload.code.GeneralErrorCode;
+import com.humix.api.global.apiPayload.exception.GeneralException;
 import com.humix.api.global.security.dto.TokenDto;
 import com.humix.api.global.security.jwt.JwtUtil;
 import lombok.RequiredArgsConstructor;
@@ -32,5 +34,28 @@ public class MemberService {
 
         // 3. 두 토큰을 함께 반환
         return new TokenDto(accessToken, refreshToken);
+    }
+
+    // 리프레시 토큰 검증 및 재발급
+    @Transactional
+    public TokenDto refreshTokens(String refreshToken) {
+        // 1. 넘어온 리프레시 토큰의 유표성 검증
+        if (!jwtUtil.isValid(refreshToken)) {
+            throw new GeneralException(GeneralErrorCode.REFRESH_TOKEN_EXPIRES);
+        }
+
+        // 2. 토큰에서 UUID 추출
+        String uuid = jwtUtil.getUuid(refreshToken);
+
+        // 3. 탈퇴한 유저이거나 없는 유저일 수 있으므로 DB 확인
+        Member member = memberRepository.findById(uuid)
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.MEMBER_NOT_FOUND));
+
+        // 4. 엑세스와 리프레시 모두 재발급
+        String newAccessToken = jwtUtil.createAccessToken(member.getUuid());
+        String newRefreshToken = jwtUtil.createRefreshToken(member.getUuid());
+
+        // 5. 두 토큰을 함께 반환
+        return new TokenDto(newAccessToken, newRefreshToken);
     }
 }

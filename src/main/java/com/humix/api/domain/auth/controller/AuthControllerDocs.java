@@ -8,6 +8,7 @@ import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.web.bind.annotation.CookieValue;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,5 +37,7 @@ public interface AuthControllerDocs {
                                     value = "{\"isSuccess\":false, \"code\":\"AUTH401\", \"message\":\"리프레시 토큰이 만료되었습니다. 다시 로그인해주세요.\", \"result\":null}")))
     })
     @PostMapping("/silent-refresh")
-    ApiResponse<Object> silentRefresh();
+    ApiResponse<MemberDTO.MemberResponse> silentRefresh(
+            @CookieValue(name = "refreshToken", required = false) String refreshToken,
+            HttpServletResponse response);
 }
