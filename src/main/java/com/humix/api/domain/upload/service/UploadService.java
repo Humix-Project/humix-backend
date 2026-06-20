@@ -1,38 +1,44 @@
 package com.humix.api.domain.upload.service;
 
-import com.humix.api.domain.humming.repository.HummingRepository;
+import com.humix.api.domain.humming.dto.HummingDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
+import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
+import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequest;
+
+import java.time.Duration;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
-public class UploadService {
+public class UploadService implements UploadServiceInterface { // 인터페이스 구현 보장
 
     private final S3Presigner s3Presigner;
-    private final MemberRepository memberRepository;
-    private final HummingRepository hummingRepository;
 
     @Value("${aws.s3.bucket}")
     private String bucketName;
 
-    @Value("${aws.s3.region-url}")
-    private String regionUrl;
-
-    /**
-     * 1. AWS S3 Presigned URL 발급
-     * 클라이언트가 S3 버킷의 hummings/ 폴더에 .wav 허밍 파일을 바로 업로드할 수 있는 10분 유효 서명 URL을 생성합니다.
-     */
-    public HummingDTO.AudioPresignedResponse createPresignedUrl(HummingDTO.AudioPresignedRequest request) {
-        String directory = "general";
-        if ("humming".equalsIgnoreCase(request.usage())) {
-            directory = "hummings";
+    @Override
+    public HummingDTO.AudioPresignedResponse getPresignedUrl(HummingDTO.AudioPresignedRequest request) {
+        // 1. Content-Type 규격 검증
+        if (request.contentType() == null || !request.contentType().startsWith("audio/")) {
+            throw new IllegalArgumentException("올바르지 않은 오디오 Content-Type입니다.");
         }
 
-        // 파일명 중복 및 덮어쓰기 방지를 위한 UUID 파일 키 조립
-        String fileKey = directory + "/" + UUID.randomUUID() + "_" + request.audioName();
+        // 2. usage 분류에 따른 폴더 경로 설정
+        String directory = "uploads/general";
+        if ("HUMMING".equalsIgnoreCase(request.usage())) {
+            directory = "uploads/humming";
+        }
 
+        // 3. UUID를 조합한 고유 파일 키 생성
+        String uniqueFileName = UUID.randomUUID() + "_" + request.audioName();
+        String fileKey = directory + "/" + uniqueFileName;
+
+        // 4. AWS S3 전용 Presigned URL 생성 로직 기동
         PutObjectRequest putObjectRequest = PutObjectRequest.builder()
                 .bucket(bucketName)
                 .key(fileKey)
@@ -47,27 +53,6 @@ public class UploadService {
         PresignedPutObjectRequest presignedPutObjectRequest = s3Presigner.presignPutObject(presignRequest);
         String presignedUrl = presignedPutObjectRequest.url().toString();
 
-        return new HummingDTO.AudioPresignedResponse(presignedUrl, fileKey);
-    }
-
-    /**
-     * 2. 허밍 메타데이터 정보 DB 영속화 저장
-     * 자료구조 테이블 명세의 제약조건(uuid VARCHAR(36) FOREIGN KEY)을 충족하기 위해 String 타입의 uuid를 조회합니다.
-     */
-    @Transactional
-    public HummingDTO.HummingSaveResponse saveHumming(String userUuid, HummingDTO.HummingSaveRequest request) {
-        // 테이블 자료구조의 uuid(익명 사용자 고유 식별자) 기반 회원 조회
-        Member member = memberRepository.findById(userUuid)
-                .orElseThrow(() -> new IllegalArgumentException("존재하지 않는 세션 사용자(UUID)입니다. 입력값: " + userUuid));
-
-        // DB VARCHAR(512) 스펙 규격에 맞춰 S3 접근 전체 주소 URL 생성
-        String s3FileUrl = String.format("%s/%s", regionUrl, request.fileKey());
-
-        // HummingDTO 내부 레코드의 .from() 메서드를 호출해 도메인 엔티티 변환 및 저장
-        Humming humming = request.from(member, s3FileUrl);
-        Humming savedHumming = hummingRepository.save(humming);
-
-        // 결과 DTO 반환
-        return HummingDTO.HummingSaveResponse.from(savedHumming);
+        return HummingDTO.AudioPresignedResponse.from(presignedUrl, fileKey);
     }
 }
