@@ -26,7 +26,12 @@ jwt:
   token:
     secret-key: ${JWT_SECRET_KEY}
     expiration:
-      access: 604800000
+      access: 1800000          # 30분 (30 * 60 * 1000)
+      refresh: 604800000        # 7일 (7 * 24 * 60 * 60 * 1000)
+  jwt:
+    cookie:
+      secure: true
+      same-site: None
 
 cors:
   allowed-origins: "https://humix.my-project.cloud,https://humix-client.vercel.app"  # EC2 퍼블릭, 버셀 도메인
