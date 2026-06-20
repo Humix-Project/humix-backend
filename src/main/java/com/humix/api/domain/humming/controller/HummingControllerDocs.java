@@ -1,5 +1,6 @@
 package com.humix.api.domain.humming.controller;
 
+import com.humix.api.domain.melodyScore.dto.MelodyScoreDTO;
 import com.humix.api.global.apiPayload.ApiResponse;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -24,14 +25,14 @@ public interface HummingControllerDocs {
                                     value = "{\"isSuccess\":false, \"code\":\"HUMMING404\", \"message\":\"해당 허밍 데이터를 찾을 수 없습니다.\", \"result\":null}")))
     })
     @PostMapping("/{humming_id}/vectors")
-    ApiResponse<Object> convertHummingToVector(@PathVariable("humming_id") Long hummingId);
+    ApiResponse<MelodyScoreDTO.MelodyVectorResponse> convertHummingToVector(@PathVariable("humming_id") Long hummingId);
 
     @Operation(summary = "사용자 수정 멜로디 벡터 저장 API", description = "사용자가 웹 에디터에서 가공한 멜로디 노트 데이터를 업데이트합니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
     })
     @PutMapping("/{humming_id}/vectors")
-    ApiResponse<Object> updateHummingVector(
+    ApiResponse<MelodyScoreDTO.MelodyVectorResponse> updateHummingVector(
             @PathVariable("humming_id") Long hummingId,
-            @RequestBody Object request);
+            @RequestBody MelodyScoreDTO.MelodyUpdateRequest request);
 }

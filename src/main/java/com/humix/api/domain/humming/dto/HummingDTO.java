@@ -19,7 +19,11 @@ public class HummingDTO {
     public record AudioPresignedResponse(
             @JsonProperty("presigned_url") String presignedUrl,
             @JsonProperty("file_key") String fileKey
-    ) {}
+    ) {
+        public static AudioPresignedResponse from(String presignedUrl, String fileKey) {
+            return new AudioPresignedResponse(presignedUrl, fileKey);
+        }
+    }
 
     //허밍 정보 저장 요청 Request
     public record HummingSaveRequest(
