@@ -1,5 +1,10 @@
 package com.humix.api.domain.upload.service;
 
+import com.humix.api.domain.humming.repository.HummingRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -13,7 +18,7 @@ public class UploadService {
     private String bucketName;
 
     @Value("${aws.s3.region-url}")
-    private String regionUrl; // 예: https://humix-bucket.s3.ap-northeast-2.amazonaws.com
+    private String regionUrl;
 
     /**
      * 1. AWS S3 Presigned URL 발급

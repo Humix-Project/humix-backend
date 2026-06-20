@@ -2,6 +2,7 @@ package com.humix.api.domain.humming.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.humix.api.domain.humming.entity.Humming;
+import com.humix.api.domain.humming.repository.HummingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
