@@ -24,7 +24,7 @@ cloud:
 
 jwt:
   token:
-    secret-key: vmfkdnj1234vmfkdnj1234vmfkdnj1234vmfkdnj1234
+    secret-key: ${JWT_SECRET_KEY}
     expiration:
       access: 604800000
 

@@ -25,6 +25,7 @@ services:
     ports:
       - "8080:8080"
     environment:
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - SPRING_PROFILES_ACTIVE=prod
       - SPRING_DATASOURCE_URL=jdbc:mariadb://humix-db:3306/humix
       - AI_SERVER_URL=https://RunPod주소         # RunPod 엔드포인트로 교체
