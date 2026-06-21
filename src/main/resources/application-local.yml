@@ -22,3 +22,15 @@ jwt:
   cookie:
     secure: false
     same-site: Lax
+
+cloud:
+  aws:
+    credentials:
+      access-key: local_test_access_key_placeholder #로컬 테스트시 필요해서 넣은 임의값
+      secret-key: local_test_secret_key_placeholder #로컬 테스트시 필요해서 넣은 임의값
+    s3:
+      bucket: aws-humix-server-s3
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
