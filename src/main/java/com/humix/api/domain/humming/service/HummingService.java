@@ -8,7 +8,6 @@ import com.humix.api.domain.melodyScore.dto.MelodyScoreDTO;
 import com.humix.api.domain.melodyScore.entity.MelodyScore;
 import com.humix.api.domain.melodyScore.repository.MelodyScoreRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -19,9 +18,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-import static reactor.netty.http.HttpConnectionLiveness.log;
-
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -41,7 +37,11 @@ public class HummingService {
         Humming humming = hummingRepository.findById(hummingId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 허밍 기록이 존재하지 않습니다. ID: " + hummingId));
 
-        log.info("요청하려는 AI 서버 주소: [{}]", aiServerUrl);
+        // 💡 100% 확실하게 콘솔에 찍히는 printf 추가
+        System.out.println("==================================================");
+        System.out.printf("★ [DEBUG] 주입된 aiServerUrl 값: [%s] (문자열 길이: %d)%n",
+                aiServerUrl, (aiServerUrl != null ? aiServerUrl.length() : 0));
+        System.out.println("==================================================");
 
         // 2. FastAPI 통신 파이프라인 개방
         WebClient webClient = webClientBuilder.baseUrl(aiServerUrl).build();
