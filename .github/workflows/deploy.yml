@@ -1,0 +1,73 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main", "develop" ] # main과 develop 브랜치에 push될 때 작동
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 1. 프로젝트 코드 가져오기
+        uses: actions/checkout@v3
+
+      - name: 2. JDK 21 환경 세팅
+        uses: actions/setup-java@v3
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: 3. Spring Boot 빌드 (jar 파일 생성)
+        run: |
+          chmod +x gradlew
+          ./gradlew clean build -x test
+
+      - name: 4. 브랜치별 배포 환경 설정 (핵심)
+        id: env-set
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "ENV_NAME=prod" >> $GITHUB_ENV
+            echo "APP_PORT=8080" >> $GITHUB_ENV
+            echo "DB_PORT=3306" >> $GITHUB_ENV
+          else
+            echo "ENV_NAME=dev" >> $GITHUB_ENV
+            echo "APP_PORT=8081" >> $GITHUB_ENV
+            echo "DB_PORT=3307" >> $GITHUB_ENV
+          fi
+
+      - name: 5. 동적 .env 파일 생성 (환경 변수 파일)
+        run: |
+          echo "ENV=$ENV_NAME" >> .env
+          echo "APP_PORT=$APP_PORT" >> .env
+          echo "DB_PORT=$DB_PORT" >> .env
+          echo "AWS_ACCESS_KEY=${{ secrets.AWS_ACCESS_KEY }}" >> .env
+          echo "AWS_SECRET_KEY=${{ secrets.AWS_SECRET_KEY }}" >> .env
+          echo "AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}" >> .env
+          echo "AWS_REGION=${{ secrets.AWS_REGION }}" >> .env
+          echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
+          echo "JWT_COOKIE_SECURE=${{ secrets.JWT_COOKIE_SECURE }}" >> .env
+          echo "JWT_COOKIE_SAME_SITE=${{ secrets.JWT_COOKIE_SAME_SITE }}" >> .env
+
+      - name: 6. EC2로 파일 전송 (jar, 도커 설정 파일 등)
+        uses: appleboy/scp-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          # 빌드된 jar와 도커 관련 파일, 환경변수 파일을 EC2로 복사
+          source: "build/libs/*-SNAPSHOT.jar, Dockerfile, docker-compose.yml, .env"
+          target: "/home/${{ secrets.EC2_USERNAME }}/humix-${{ env.ENV_NAME }}"
+          strip_components: 0
+
+      - name: 7. EC2 접속 후 Docker 실행
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/${{ secrets.EC2_USERNAME }}/humix-${{ env.ENV_NAME }}
+            # 기존 컨테이너를 내리고, 새 이미지를 빌드하여 백그라운드에서 실행
+            docker compose --project-name humix-${{ env.ENV_NAME }} --env-file .env up --build -d
+            # 사용하지 않는 이전 도커 찌꺼기 이미지 정리 (용량 확보)
+            docker image prune -f
