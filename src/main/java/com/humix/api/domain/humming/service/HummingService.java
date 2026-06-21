@@ -30,6 +30,12 @@ public class HummingService {
     @Value("${ai.server.url}")
     private String aiServerUrl;
 
+    @Value("${runpod.endpoint-url}")
+    private String runpodEndpointUrl;
+
+    @Value("${runpod.api-key}")
+    private String runpodApiKey;
+
     //[POST] Humming ID 기반으로 원본 파일 경로를 참조해 FastAPI에 벡터화를 위임하고 결과를 영속화합니다.
     @Transactional
     public MelodyScoreDTO.MelodyVectorResponse convertHummingToVector(Long hummingId) {
@@ -37,15 +43,29 @@ public class HummingService {
         Humming humming = hummingRepository.findById(hummingId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 허밍 기록이 존재하지 않습니다. ID: " + hummingId));
 
-        // 2. FastAPI 통신 파이프라인 개방
-        WebClient webClient = webClientBuilder.baseUrl(aiServerUrl).build();
+        // 2. RunPod Serverless 통신 파이프라인 개방 (/runsync: 동기 실행)
+        WebClient webClient = webClientBuilder.baseUrl(runpodEndpointUrl).build();
 
-        List<?> rawResponse = webClient.post()
-                .uri("/api/v1/ai/melody-extract")
-                .bodyValue(Map.of("s3_url", humming.getS3FileUrl()))
+        Map<?, ?> runpodResponse = webClient.post()
+                .uri("/runsync")
+                .header("Authorization", "Bearer " + runpodApiKey)
+                .bodyValue(Map.of("input", Map.of("action", "melody-extract", "s3_url", humming.getS3FileUrl())))
                 .retrieve()
-                .bodyToMono(List.class)
+                .bodyToMono(Map.class)
                 .block();
+
+        // RunPod 응답: {"id": "...", "status": "COMPLETED", "output": {"result_vector": [...]}}
+        Object outputObj = runpodResponse != null ? runpodResponse.get("output") : null;
+        List<?> rawResponse = null;
+        if (outputObj instanceof Map<?, ?> outputMap) {
+            Object resultVector = outputMap.get("result_vector");
+            if (resultVector instanceof List<?>) {
+                rawResponse = (List<?>) resultVector;
+            }
+        }
+        if (rawResponse == null) {
+            throw new IllegalStateException("멘로디 벡터화 응답이 유효하지 않습니다. RunPod 응답: " + runpodResponse);
+        }
 
         try {
             // 2. objectMapper와 TypeReference를 사용하여 명확한 타입으로 안전하게 변환합니다.
