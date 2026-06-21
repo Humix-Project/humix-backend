@@ -3,6 +3,7 @@ name: CI/CD Pipeline
 on:
   push:
     branches: [ "main", "develop" ] # main과 develop 브랜치에 push될 때 작동
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -22,18 +23,11 @@ jobs:
           chmod +x gradlew
           ./gradlew clean build -x test
 
-      - name: 4. 브랜치별 배포 환경 설정 (핵심)
-        id: env-set
+      - name: 4. 메인 환경 변수 고정 설정
         run: |
-          if [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "ENV_NAME=prod" >> $GITHUB_ENV
-            echo "APP_PORT=8080" >> $GITHUB_ENV
-            echo "DB_PORT=3306" >> $GITHUB_ENV
-          else
-            echo "ENV_NAME=dev" >> $GITHUB_ENV
-            echo "APP_PORT=8081" >> $GITHUB_ENV
-            echo "DB_PORT=3307" >> $GITHUB_ENV
-          fi
+          echo "ENV_NAME=prod" >> $GITHUB_ENV
+          echo "APP_PORT=8080" >> $GITHUB_ENV
+          echo "DB_PORT=3306" >> $GITHUB_ENV
 
       - name: 5. 동적 .env 파일 생성 (환경 변수 파일)
         run: |
