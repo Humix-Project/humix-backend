@@ -28,6 +28,7 @@ cloud:
     credentials:
       access-key: ${HUMIX_AWS_ACCESS_KEY:placeholder}
       secret-key: ${HUMIX_AWS_SECRET_KEY:placeholder}
+    profile: HuMix
     s3:
       bucket: aws-humix-server-s3
     region:
