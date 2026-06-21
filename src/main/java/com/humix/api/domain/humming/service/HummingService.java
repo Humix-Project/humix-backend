@@ -37,6 +37,10 @@ public class HummingService {
         Humming humming = hummingRepository.findById(hummingId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 허밍 기록이 존재하지 않습니다. ID: " + hummingId));
 
+        String s3Url = humming.getS3FileUrl();
+
+        validateS3Url(s3Url);
+
         // 2. FastAPI 통신 파이프라인 개방
         WebClient webClient = webClientBuilder.baseUrl(aiServerUrl).build();
 
@@ -77,6 +81,22 @@ public class HummingService {
 
         } catch (Exception e) {
             throw new IllegalStateException("멜로디 벡터화 과정에서 오류가 발생했습니다.", e);
+        }
+    }
+
+    private void validateS3Url(String urlString) {
+        if (urlString == null || urlString.isBlank()) {
+            throw new IllegalArgumentException("DB에 저장된 S3 URL이 비어있습니다.");
+        }
+        try {
+            // 자바 내장 URI 클래스로 파싱을 시도하여 구조적 결함(https:/// 등)을 1차로 걸러냅니다.
+            java.net.URI uri = java.net.URI.create(urlString.trim());
+
+            if (uri.getHost() == null || !uri.getScheme().equalsIgnoreCase("https")) {
+                throw new IllegalArgumentException("잘못된 형식의 S3 호스트 주소입니다: " + urlString);
+            }
+        } catch (Exception e) {
+            throw new IllegalArgumentException("S3 URL 문자열 파싱 중 Bad Authority 구조적 결함 발견: " + urlString, e);
         }
     }
 
