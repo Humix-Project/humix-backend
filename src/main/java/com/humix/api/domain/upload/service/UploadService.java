@@ -3,7 +3,6 @@ package com.humix.api.domain.upload.service;
 import com.humix.api.domain.humming.dto.HummingDTO;
 import com.humix.api.domain.humming.entity.Humming;
 import com.humix.api.domain.humming.repository.HummingRepository;
-import com.humix.api.domain.member.repository.MemberRepository;
 import com.humix.api.domain.upload.dto.UploadDTO;
 import com.humix.api.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
