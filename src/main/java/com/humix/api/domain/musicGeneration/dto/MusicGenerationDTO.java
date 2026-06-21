@@ -23,6 +23,7 @@ public class MusicGenerationDTO {
                     .member(member)
                     .melodyScore(melodyScore)
                     .parentGeneration(null)
+                    .name(this.title)
                     .genre(this.genre)
                     .atmosphere(this.mood)
                     .build();
@@ -51,6 +52,7 @@ public class MusicGenerationDTO {
                     .member(member)
                     .melodyScore(melodyScore)
                     .parentGeneration(parentGeneration)
+                    .name(parentGeneration.getName() + " (수정본)")
                     .genre(parentGeneration.getGenre())
                     .atmosphere(parentGeneration.getAtmosphere())
                     .build();

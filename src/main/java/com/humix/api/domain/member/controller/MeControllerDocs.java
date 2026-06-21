@@ -1,8 +1,11 @@
 package com.humix.api.domain.member.controller;
 
+import com.humix.api.domain.musicGeneration.dto.MusicGenerationDTO;
 import com.humix.api.global.apiPayload.ApiResponse;
+import com.humix.api.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -15,7 +18,8 @@ public interface MeControllerDocs {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
     })
     @GetMapping("/songs")
-    ApiResponse<Object> getMySongs(
+    ApiResponse<MusicGenerationDTO.SongListResponse> getMySongs(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @RequestParam(required = false, defaultValue = "1") int page,
             @RequestParam(required = false, defaultValue = "10") int size,
             @RequestParam(required = false) String genre);

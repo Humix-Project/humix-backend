@@ -15,3 +15,6 @@ ai:
   server:
     # 로컬 도커 컴포즈로 돌릴 때는 http://humix-ai:8000 이 들어갑니다.
     url: ${AI_SERVER_URL:http://localhost:8000}
+
+backend:
+  url: ${BACKEND_URL:http://localhost:8080}
