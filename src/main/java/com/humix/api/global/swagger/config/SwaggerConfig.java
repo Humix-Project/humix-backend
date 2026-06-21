@@ -6,11 +6,15 @@ import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
 import io.swagger.v3.oas.models.servers.Server;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
 public class SwaggerConfig {
+
+    @Value("${DEPLOY_TIME:로컬 실행}")
+    private String deployTime;
 
     @Bean
     public OpenAPI customOpenAPI() {
@@ -25,13 +29,17 @@ public class SwaggerConfig {
         // 2. 전체 API에 보안 요구사항(SecurityRequirement) 적용
         SecurityRequirement securityRequirement = new SecurityRequirement().addList(jwtSchemeName);
 
+        String description = String.format(
+                "허밍 기반의 개인 맞춤형 AI 음악 창작 웹 서비스, Humix의 API 문서입니다.\n\n" +
+                "🚀 **배포 일시**: %s", deployTime);
+
         return new OpenAPI()
                 .addServersItem(new Server().url("https://humix.my-project.cloud").description("운영 서버"))
                 .addServersItem(new Server().url("http://localhost:8080").description("로컬 테스트용"))
                 .info(new Info()
                         .title("Humix API 명세서")
                         .version("1.0.0")
-                        .description("허밍 기반의 개인 맞춤형 AI 음악 창작 웹 서비스, Humix의 API 문서입니다."))
+                        .description(description))
                 .components(new Components()
                         .addSecuritySchemes(jwtSchemeName, securityScheme)) // Components에 SecurityScheme 추가
                 .addSecurityItem(securityRequirement); // 글로벌 시큐리티 적용
