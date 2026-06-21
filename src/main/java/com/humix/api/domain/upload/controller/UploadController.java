@@ -5,7 +5,9 @@ import com.humix.api.domain.upload.dto.UploadDTO;
 import com.humix.api.domain.upload.service.UploadService;
 import com.humix.api.global.apiPayload.ApiResponse;
 import com.humix.api.global.apiPayload.code.GeneralSuccessCode;
+import com.humix.api.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -19,16 +21,17 @@ public class UploadController implements UploadControllerDocs {
     @Override
     public ApiResponse<UploadDTO.AudioPresignedResponse> getPresignedUrl(@RequestBody UploadDTO.AudioPresignedRequest request) {
 
-        UploadDTO.AudioPresignedResponse result = uploadService.getAudioPresignedUrl(request);
+        UploadDTO.AudioPresignedResponse result = uploadService.getPresignedUrl(request);
 
         return ApiResponse.onSuccess(GeneralSuccessCode.OK, result);
     }
 
     @PostMapping("/humming")
     @Override
-    public ApiResponse<HummingDTO.HummingSaveResponse> saveHummingInfo(@RequestBody HummingDTO.HummingSaveRequest request) {
+    public ApiResponse<HummingDTO.HummingSaveResponse> saveHummingInfo(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                       @RequestBody HummingDTO.HummingSaveRequest request) {
 
-        HummingDTO.HummingSaveResponse result = uploadService.saveHummingMetadata(request);
+        HummingDTO.HummingSaveResponse result = uploadService.saveHummingInfo(userDetails, request);
 
         return ApiResponse.onSuccess(GeneralSuccessCode.OK, result);
     }

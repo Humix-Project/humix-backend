@@ -3,11 +3,13 @@ package com.humix.api.domain.upload.controller;
 import com.humix.api.domain.humming.dto.HummingDTO;
 import com.humix.api.domain.upload.dto.UploadDTO;
 import com.humix.api.global.apiPayload.ApiResponse;
+import com.humix.api.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -31,7 +33,8 @@ public interface UploadControllerDocs {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
     })
     @PostMapping("/humming")
-    ApiResponse<HummingDTO.HummingSaveResponse> saveHummingInfo(@RequestBody HummingDTO.HummingSaveRequest request);
+    ApiResponse<HummingDTO.HummingSaveResponse> saveHummingInfo(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                @RequestBody HummingDTO.HummingSaveRequest request);
 
     @Operation(summary = "참조곡 오디오 메타데이터 저장 API", description = "S3 업로드 완료 후 사용자가 올린 참조곡의 메타데이터를 저장합니다.")
     @ApiResponses({
