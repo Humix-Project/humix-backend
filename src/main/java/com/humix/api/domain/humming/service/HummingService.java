@@ -8,6 +8,7 @@ import com.humix.api.domain.melodyScore.dto.MelodyScoreDTO;
 import com.humix.api.domain.melodyScore.entity.MelodyScore;
 import com.humix.api.domain.melodyScore.repository.MelodyScoreRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -20,6 +21,7 @@ import java.util.Map;
 
 import static reactor.netty.http.HttpConnectionLiveness.log;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
