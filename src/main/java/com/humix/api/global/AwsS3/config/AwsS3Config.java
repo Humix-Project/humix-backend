@@ -37,6 +37,16 @@ public class AwsS3Config {
             credentialsProvider = StaticCredentialsProvider.create(credentials);
         }
 
+        try {
+            // 실제로 자격 증명 체인이 시스템에서 긁어온 Access Key ID를 확인하여 로그로 출력합니다.
+            String resolvedKey = credentialsProvider.resolveCredentials().accessKeyId();
+            System.out.println("  - Resolved AWS Access Key ID : " + resolvedKey);
+        } catch (Exception e) {
+            System.out.println("  - Resolved AWS Credentials ERROR: " + e.getMessage());
+        }
+
+        System.out.println("===============================================");
+
         // S3Presigner 빌더를 통해 Region과 자격 증명을 주입하여 Bean으로 등록합니다.
         return S3Presigner.builder()
                 .region(Region.of(region))
