@@ -25,7 +25,6 @@ public class AwsS3Config {
     public S3Presigner s3Presigner() {
         System.out.println("===============================================");
         System.out.println("  AWS S3 Configuration Setup");
-        System.out.println("  - Active Profile: " + (awsProfile != null && !awsProfile.isBlank() ? awsProfile : "Default/None"));
         System.out.println("  - Access Key ID : " + (accessKey != null ? accessKey : "Not Set"));
         System.out.println("===============================================");
 
