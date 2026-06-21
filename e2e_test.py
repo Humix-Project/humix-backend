@@ -158,7 +158,7 @@ step(1.9, "멜로디 벡터 추출 (동기 실행)")
 vector_resp = requests.post(
     f"{BACKEND}/api/v1/hummings/{humming_id}/vectors",
     headers=headers,
-    timeout=60 # AI 서버 멜로디 추출 연산 시간을 고려하여 넉넉히 대기
+    timeout=300 # 실제 RunPod Serverless의 최초 Cold Start(1~3분) 대기를 버티기 위해 300초로 연장
 )
 
 print(f"  → Status: {vector_resp.status_code}")
