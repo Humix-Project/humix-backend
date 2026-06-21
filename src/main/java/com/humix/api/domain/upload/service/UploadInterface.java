@@ -14,4 +14,11 @@ public interface UploadInterface {
     UploadDTO.AudioPresignedResponse getPresignedUrl(UploadDTO.AudioPresignedRequest request);
     HummingDTO.HummingSaveResponse saveHummingInfo(CustomUserDetails userDetails,
                                                    HummingDTO.HummingSaveRequest request);
+    /*
+     * 특정 허밍 데이터를 삭제합니다. (DB 레코드 삭제 및 S3 물리 파일 삭제)
+     *
+     * @param userDetails 인증된 사용자 정보
+     * @param hummingId 삭제할 허밍의 고유 ID
+     */
+    //void deleteHumming(CustomUserDetails userDetails, Long hummingId);
 }
