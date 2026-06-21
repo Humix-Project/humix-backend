@@ -13,6 +13,9 @@ spring:
       max-file-size: 50MB      # 음성파일 크기에 맞게 조정
       max-request-size: 50MB
 
+server:
+  forward-headers-strategy: framework  # 앞단 프록시의 HTTPS 설정을 그대로 이어받음
+
 cloud:
   aws:
     credentials:

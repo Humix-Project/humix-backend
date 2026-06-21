@@ -5,6 +5,7 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.security.SecurityRequirement;
 import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.servers.Server;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -25,6 +26,8 @@ public class SwaggerConfig {
         SecurityRequirement securityRequirement = new SecurityRequirement().addList(jwtSchemeName);
 
         return new OpenAPI()
+                .addServersItem(new Server().url("https://humix.my-project.cloud").description("운영 서버"))
+                .addServersItem(new Server().url("http://localhost:8080").description("로컬 테스트용"))
                 .info(new Info()
                         .title("Humix API 명세서")
                         .version("1.0.0")
