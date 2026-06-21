@@ -25,9 +25,9 @@ jwt:
 
 cloud:
   aws:
-    credentials:
-      access-key: ${AWS_ACCESS_KEY:local_test_access_key_placeholder}
-      secret-key: ${AWS_SECRET_KEY:local_test_secret_key_placeholder}
+#    credentials:
+#      access-key: ${AWS_ACCESS_KEY:local_test_access_key_placeholder}
+#      secret-key: ${AWS_SECRET_KEY:local_test_secret_key_placeholder}
     s3:
       bucket: aws-humix-server-s3
     region:
