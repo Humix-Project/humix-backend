@@ -21,11 +21,15 @@ public class AwsS3Config {
     @Value("${cloud.aws.region.static}")
     private String region;
 
+    @Value("${runpod.api-key:}")
+    private String runpodApiKey;
+
     @Bean
     public S3Presigner s3Presigner() {
         System.out.println("===============================================");
         System.out.println("  AWS S3 Configuration Setup");
         System.out.println("  - Access Key ID : " + (accessKey != null ? accessKey : "Not Set"));
+        System.out.println("  - RunPod API Key: " + (runpodApiKey != null && !runpodApiKey.isBlank() ? "PRESENT (Length: " + runpodApiKey.length() + ")" : "EMPTY/MISSING"));
         System.out.println("===============================================");
 
         AwsCredentialsProvider credentialsProvider;
@@ -36,16 +40,6 @@ public class AwsS3Config {
             AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
             credentialsProvider = StaticCredentialsProvider.create(credentials);
         }
-
-        try {
-            // 실제로 자격 증명 체인이 시스템에서 긁어온 Access Key ID를 확인하여 로그로 출력합니다.
-            String resolvedKey = credentialsProvider.resolveCredentials().accessKeyId();
-            System.out.println("  - Resolved AWS Access Key ID : " + resolvedKey);
-        } catch (Exception e) {
-            System.out.println("  - Resolved AWS Credentials ERROR: " + e.getMessage());
-        }
-
-        System.out.println("===============================================");
 
         // S3Presigner 빌더를 통해 Region과 자격 증명을 주입하여 Bean으로 등록합니다.
         return S3Presigner.builder()
