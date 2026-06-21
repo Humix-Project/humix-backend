@@ -32,6 +32,7 @@ services:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_COOKIE_SECURE=${JWT_COOKIE_SECURE}
       - JWT_COOKIE_SAME_SITE=${JWT_COOKIE_SAME_SITE}
+      - DEPLOY_TIME=${DEPLOY_TIME}
       - SPRING_PROFILES_ACTIVE=${ENV}
       - SPRING_DATASOURCE_URL=jdbc:mariadb://humix-db-${ENV}:3306/humix
       - AI_SERVER_URL=https://RunPod주소

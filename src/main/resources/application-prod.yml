@@ -1,9 +1,9 @@
 spring:
   datasource:
     driver-class-name: org.mariadb.jdbc.Driver
-    url: jdbc:mariadb://humix-db:3306/humix
-    username: root
-    password: root
+    url: ${SPRING_DATASOURCE_URL:jdbc:mariadb://humix-db-prod:3306/humix}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:root}
   jpa:
     hibernate:
       ddl-auto: update
