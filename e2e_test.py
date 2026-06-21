@@ -122,6 +122,54 @@ except Exception as e:
     fail(f"테스트 음원 파일 업로드 중 오류 발생: {e}")
 
 # ───────────────────────────────────────────────
+# STEP 1.7: 허밍 정보 저장 (POST /api/v1/upload/humming)
+# ───────────────────────────────────────────────
+step(1.7, "허밍 정보 저장")
+
+save_resp = requests.post(
+    f"{BACKEND}/api/v1/upload/humming",
+    json={
+        "file_key": s3_key,
+        "duration_seconds": 30
+    },
+    headers=headers,
+    timeout=10
+)
+
+print(f"  → Status: {save_resp.status_code}")
+print(f"  → Body:   {save_resp.text[:400]}")
+
+if save_resp.status_code not in (200, 201):
+    fail(f"허밍 정보 저장 실패: {save_resp.status_code}\n{save_resp.text}")
+
+save_body = save_resp.json()
+humming_id = save_body.get("result", {}).get("humming_id")
+
+if not humming_id:
+    fail(f"응답에서 humming_id를 찾지 못했습니다. 응답: {save_body}")
+
+ok(f"허밍 정보 저장 완료. 생성된 humming_id: {humming_id}")
+
+# ───────────────────────────────────────────────
+# STEP 1.9: 멜로디 벡터 추출 (POST /api/v1/hummings/{humming_id}/vectors)
+# ───────────────────────────────────────────────
+step(1.9, "멜로디 벡터 추출 (동기 실행)")
+
+vector_resp = requests.post(
+    f"{BACKEND}/api/v1/hummings/{humming_id}/vectors",
+    headers=headers,
+    timeout=60 # AI 서버 멜로디 추출 연산 시간을 고려하여 넉넉히 대기
+)
+
+print(f"  → Status: {vector_resp.status_code}")
+print(f"  → Body:   {vector_resp.text[:400]}")
+
+if vector_resp.status_code not in (200, 201):
+    fail(f"멜로디 벡터 추출 실패: {vector_resp.status_code}\n{vector_resp.text}")
+
+ok("멜로디 벡터 추출 완료 및 데이터베이스 악보 저장 확인")
+
+# ───────────────────────────────────────────────
 # STEP 2: 노래 생성 요청 (POST /api/v1/generation/songs)
 # ───────────────────────────────────────────────
 step(2, "노래 생성 요청 (202 Accepted)")
@@ -129,7 +177,7 @@ step(2, "노래 생성 요청 (202 Accepted)")
 resp = requests.post(
     f"{BACKEND}/api/v1/generation/songs",
     json={
-        "humming_id": HUMMING_ID,
+        "humming_id": humming_id,
         "title": "E2E Test Song",
         "genre": "pop",
         "mood": "happy",
