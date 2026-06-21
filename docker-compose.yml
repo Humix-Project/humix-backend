@@ -5,12 +5,12 @@ networks:
 services:
   humix-db:
     image: mariadb:latest
-    container_name: humix-db
+    container_name: humix-db-${ENV} # prod 또는 dev로 자동 변경됨
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: humix
     ports:
-      - "3306:3306"
+      - "${DB_PORT}:3306" # 운영은 3306
     networks:
       - humix-network
     healthcheck:
@@ -21,9 +21,9 @@ services:
 
   humix-backend:
     build: .
-    container_name: humix-backend
+    container_name: humix-backend-${ENV} # prod 또는 dev로 자동 변경
     ports:
-      - "8080:8080"
+      - "${APP_PORT}:8080" # 운영은 8080
     environment:
       - AWS_ACCESS_KEY=${AWS_ACCESS_KEY}
       - AWS_SECRET_KEY=${AWS_SECRET_KEY}
@@ -32,11 +32,11 @@ services:
       - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - JWT_COOKIE_SECURE=${JWT_COOKIE_SECURE}
       - JWT_COOKIE_SAME_SITE=${JWT_COOKIE_SAME_SITE}
-      - SPRING_PROFILES_ACTIVE=prod
-      - SPRING_DATASOURCE_URL=jdbc:mariadb://humix-db:3306/humix
-      - AI_SERVER_URL=https://RunPod주소         # RunPod 엔드포인트로 교체
+      - SPRING_PROFILES_ACTIVE=${ENV}
+      - SPRING_DATASOURCE_URL=jdbc:mariadb://humix-db-${ENV}:3306/humix
+      - AI_SERVER_URL=https://RunPod주소
     depends_on:
       humix-db:
-        condition: service_healthy    # DB 준비 후 스프링을 띄울 것
+        condition: service_healthy
     networks:
       - humix-network
