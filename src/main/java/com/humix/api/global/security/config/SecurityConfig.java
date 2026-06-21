@@ -66,15 +66,15 @@ public class SecurityConfig {
                                 "/api/v1/internal/**").permitAll()
 
                         // 🚨 특정 도메인은 무조건 인증(로그인) 필요하게 막기
-                        // .requestMatchers("/api/v1/generation/**").authenticated()
+                        .requestMatchers("/api/v1/upload/**").authenticated()
 
                         // 나머지는 다 인증 불필요
                         .anyRequest().permitAll()
-                );
+                )
 
                 // 🛑 현재 프론트와의 연결 테스트를 위해 꺼뒀습니다 🛑
                 // JwtFilter를 시큐리티 필터 체인에 끼워 넣기
-                // .addFilterBefore(new JwtFilter(jwtUtil, userDetailsService), UsernamePasswordAuthenticationFilter.class);
+                .addFilterBefore(new JwtFilter(jwtUtil, userDetailsService), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
