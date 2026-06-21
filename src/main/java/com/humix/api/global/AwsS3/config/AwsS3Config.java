@@ -23,6 +23,12 @@ public class AwsS3Config {
 
     @Bean
     public S3Presigner s3Presigner() {
+        System.out.println("===============================================");
+        System.out.println("  AWS S3 Configuration Setup");
+        System.out.println("  - Active Profile: " + (awsProfile != null && !awsProfile.isBlank() ? awsProfile : "Default/None"));
+        System.out.println("  - Access Key ID : " + (accessKey != null ? accessKey : "Not Set"));
+        System.out.println("===============================================");
+
         AwsCredentialsProvider credentialsProvider;
         if (accessKey == null || accessKey.isBlank() || accessKey.contains("placeholder")) {
             // Fallback to default credentials provider chain (environment variables, ~/.aws/credentials, etc.)
