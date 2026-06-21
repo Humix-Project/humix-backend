@@ -18,6 +18,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static reactor.netty.http.HttpConnectionLiveness.log;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -36,6 +38,8 @@ public class HummingService {
         // 1. 데이터베이스로부터 허밍 엔티티 및 적재된 S3 오디오 주소를 로드합니다.
         Humming humming = hummingRepository.findById(hummingId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 허밍 기록이 존재하지 않습니다. ID: " + hummingId));
+
+        log.info("요청하려는 AI 서버 주소: [{}]", aiServerUrl);
 
         // 2. FastAPI 통신 파이프라인 개방
         WebClient webClient = webClientBuilder.baseUrl(aiServerUrl).build();
