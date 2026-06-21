@@ -4,7 +4,9 @@ import com.humix.api.domain.humming.service.HummingService;
 import com.humix.api.domain.melodyScore.dto.MelodyScoreDTO;
 import com.humix.api.global.apiPayload.ApiResponse;
 import com.humix.api.global.apiPayload.code.GeneralSuccessCode;
+import com.humix.api.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -16,7 +18,8 @@ public class HummingController implements HummingControllerDocs {
 
     @PostMapping("/{humming_id}/vectors")
     @Override
-    public ApiResponse<MelodyScoreDTO.MelodyVectorResponse> convertHummingToVector(@PathVariable("humming_id") Long hummingId) {
+    public ApiResponse<MelodyScoreDTO.MelodyVectorResponse> convertHummingToVector(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                                   @PathVariable("humming_id") Long hummingId) {
 
         MelodyScoreDTO.MelodyVectorResponse result = hummingService.convertHummingToVector(hummingId);
 
@@ -26,6 +29,7 @@ public class HummingController implements HummingControllerDocs {
     @PutMapping("/{humming_id}/vectors")
     @Override
     public ApiResponse<MelodyScoreDTO.MelodyVectorResponse> updateHummingVector(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("humming_id") Long hummingId,
             @RequestBody MelodyScoreDTO.MelodyUpdateRequest request) {
 
