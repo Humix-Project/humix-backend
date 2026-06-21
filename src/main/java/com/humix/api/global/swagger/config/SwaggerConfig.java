@@ -29,7 +29,7 @@ public class SwaggerConfig {
                 .addServersItem(new Server().url("https://humix.my-project.cloud").description("운영 서버"))
                 .addServersItem(new Server().url("http://localhost:8080").description("로컬 테스트용"))
                 .info(new Info()
-                        .title("Humix API 명세서")
+                        .title("Humix API 명세서 (12시 20분 버전)")
                         .version("1.0.0")
                         .description("허밍 기반의 개인 맞춤형 AI 음악 창작 웹 서비스, Humix의 API 문서입니다."))
                 .components(new Components()
