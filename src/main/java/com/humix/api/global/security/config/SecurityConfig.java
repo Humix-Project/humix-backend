@@ -62,7 +62,8 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**",
                                 "/health",
-                                "/actuator/**").permitAll()
+                                "/actuator/**",
+                                "/api/v1/internal/**").permitAll()
 
                         // 🚨 특정 도메인은 무조건 인증(로그인) 필요하게 막기
                         .requestMatchers("/api/v1/upload/**").authenticated()

@@ -47,6 +47,12 @@ public class MusicGeneration {
     @Column(name = "result_s3_url", length = 512)
     private String resultS3Url;
 
+    @Column(name = "task_id", length = 100, unique = true)
+    private String taskId;
+
+    @Column(name = "duration_seconds")
+    private Integer durationSeconds;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     private GenerationStatus status;
@@ -57,13 +63,15 @@ public class MusicGeneration {
 
     @Builder
     public MusicGeneration(Member member, MelodyScore melodyScore, MusicGeneration parentGeneration,
-                           String genre, String atmosphere) {
+                           String name, String genre, String atmosphere, String taskId, Integer durationSeconds) {
         this.member = member;
         this.melodyScore = melodyScore;
         this.parentGeneration = parentGeneration;
-        this.name = "나의 허밍곡"; // Default 값 설정
+        this.name = name != null ? name : "나의 허밍곡"; // Default 값 설정
         this.genre = genre;
         this.atmosphere = atmosphere;
+        this.taskId = taskId;
+        this.durationSeconds = durationSeconds;
         this.status = GenerationStatus.PROCESSING; // 초기 상태 설정
     }
 
@@ -76,5 +84,15 @@ public class MusicGeneration {
     public void updateStatus(GenerationStatus status, String resultS3Url) {
         this.status = status;
         this.resultS3Url = resultS3Url;
+    }
+
+    // Task ID 업데이트 메서드
+    public void updateTaskId(String taskId) {
+        this.taskId = taskId;
+    }
+
+    // 재생 시간 업데이트 메서드
+    public void updateDuration(Integer durationSeconds) {
+        this.durationSeconds = durationSeconds;
     }
 }

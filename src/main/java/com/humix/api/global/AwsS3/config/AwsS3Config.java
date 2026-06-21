@@ -4,6 +4,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
+import software.amazon.awssdk.auth.credentials.AwsCredentialsProvider;
+import software.amazon.awssdk.auth.credentials.DefaultCredentialsProvider;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -21,13 +23,19 @@ public class AwsS3Config {
 
     @Bean
     public S3Presigner s3Presigner() {
-        // 1. application.yml에 등록된 자격 증명(AccessKey, SecretKey)을 가져옵니다.
-        AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
+        AwsCredentialsProvider credentialsProvider;
+        if (accessKey == null || accessKey.isBlank() || accessKey.contains("placeholder")) {
+            // Fallback to default credentials provider chain (environment variables, ~/.aws/credentials, etc.)
+            credentialsProvider = DefaultCredentialsProvider.create();
+        } else {
+            AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
+            credentialsProvider = StaticCredentialsProvider.create(credentials);
+        }
 
-        // 2. S3Presigner 빌더를 통해 Region과 자격 증명을 주입하여 Bean으로 등록합니다.
+        // S3Presigner 빌더를 통해 Region과 자격 증명을 주입하여 Bean으로 등록합니다.
         return S3Presigner.builder()
                 .region(Region.of(region))
-                .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                .credentialsProvider(credentialsProvider)
                 .build();
     }
 }
