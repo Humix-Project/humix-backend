@@ -2,11 +2,13 @@ package com.humix.api.domain.humming.controller;
 
 import com.humix.api.domain.melodyScore.dto.MelodyScoreDTO;
 import com.humix.api.global.apiPayload.ApiResponse;
+import com.humix.api.global.security.userdetails.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -25,7 +27,8 @@ public interface HummingControllerDocs {
                                     value = "{\"isSuccess\":false, \"code\":\"HUMMING404\", \"message\":\"해당 허밍 데이터를 찾을 수 없습니다.\", \"result\":null}")))
     })
     @PostMapping("/{humming_id}/vectors")
-    ApiResponse<MelodyScoreDTO.MelodyVectorResponse> convertHummingToVector(@PathVariable("humming_id") Long hummingId);
+    ApiResponse<MelodyScoreDTO.MelodyVectorResponse> convertHummingToVector(@AuthenticationPrincipal CustomUserDetails userDetails,
+                                                                            @PathVariable("humming_id") Long hummingId);
 
     @Operation(summary = "사용자 수정 멜로디 벡터 저장 API", description = "사용자가 웹 에디터에서 가공한 멜로디 노트 데이터를 업데이트합니다.")
     @ApiResponses({
@@ -33,6 +36,7 @@ public interface HummingControllerDocs {
     })
     @PutMapping("/{humming_id}/vectors")
     ApiResponse<MelodyScoreDTO.MelodyVectorResponse> updateHummingVector(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("humming_id") Long hummingId,
             @RequestBody MelodyScoreDTO.MelodyUpdateRequest request);
 }
