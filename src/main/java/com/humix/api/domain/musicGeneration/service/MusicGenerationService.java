@@ -12,6 +12,8 @@ import com.humix.api.domain.musicGeneration.dto.MusicGenerationDTO;
 import com.humix.api.domain.musicGeneration.entity.MusicGeneration;
 import com.humix.api.domain.musicGeneration.repository.MusicGenerationRepository;
 import com.humix.api.domain.musicGeneration.type.GenerationStatus;
+import com.humix.api.global.apiPayload.code.GeneralErrorCode;
+import com.humix.api.global.apiPayload.exception.GeneralException;
 import com.humix.api.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -83,6 +85,10 @@ public class MusicGenerationService {
     @Transactional
     public MusicGenerationDTO.TaskAcceptedResponse generateSong(CustomUserDetails userDetails,
                                                                 MusicGenerationDTO.SongCreateRequest request) {
+        if (userDetails == null || userDetails.getMember() == null) {
+            throw new GeneralException(GeneralErrorCode.LOGIN_REQUIRED);
+        }
+
         // 1. MelodyScore 로드
         MelodyScore melodyScore = melodyScoreRepository.findByHummingId(request.hummingId())
                 .orElseThrow(() -> new IllegalArgumentException("해당 허밍의 멜로디 악보가 존재하지 않습니다. ID: " + request.hummingId()));
@@ -144,6 +150,10 @@ public class MusicGenerationService {
     public MusicGenerationDTO.TaskAcceptedResponse modifySongPrompt(CustomUserDetails userDetails,
                                                                     Long songId,
                                                                     MusicGenerationDTO.SongModificationRequest request) {
+        if (userDetails == null || userDetails.getMember() == null) {
+            throw new GeneralException(GeneralErrorCode.LOGIN_REQUIRED);
+        }
+
         // 1. 기존 완성곡(Parent) 로드
         MusicGeneration parentGeneration = musicGenerationRepository.findById(songId)
                 .orElseThrow(() -> new IllegalArgumentException("수정의 대상이 되는 원본 곡이 존재하지 않습니다. ID: " + songId));
