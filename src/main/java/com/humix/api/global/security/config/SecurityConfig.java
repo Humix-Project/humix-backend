@@ -18,6 +18,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import org.springframework.http.HttpMethod;
 
 import java.util.Arrays;
 import java.util.List;
@@ -67,6 +68,7 @@ public class SecurityConfig {
 
                         // 🚨 특정 도메인은 무조건 인증(로그인) 필요하게 막기
                         .requestMatchers("/api/v1/upload/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/v1/generation/songs", "/api/v1/generation/songs/*/modifications").authenticated()
 
                         // 나머지는 다 인증 불필요
                         .anyRequest().permitAll()
