@@ -35,7 +35,7 @@ services:
       - DEPLOY_TIME=${DEPLOY_TIME}
       - SPRING_PROFILES_ACTIVE=${ENV}
       - SPRING_DATASOURCE_URL=jdbc:mariadb://humix-db-${ENV}:3306/humix
-      - AI_SERVER_URL=http://humix-ai-cpu-${ENV}:8000
+      - AI_SERVER_URL=${AI_SERVER_URL}
       - AI_GENERATION_SERVER_URL=${AI_GENERATION_SERVER_URL}
     depends_on:
       humix-db:
