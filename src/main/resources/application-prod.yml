@@ -40,3 +40,6 @@ jwt:
 
 cors:
   allowed-origins: "https://humix.my-project.cloud,https://humix-client.vercel.app"  # EC2 퍼블릭, 버셀 도메인
+
+backend:
+  url: https://humix.my-project.cloud
