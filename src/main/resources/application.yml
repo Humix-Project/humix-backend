@@ -16,5 +16,9 @@ ai:
     # 로컬 도커 컴포즈로 돌릴 때는 http://humix-ai:8000 이 들어갑니다.
     url: ${AI_SERVER_URL:http://localhost:8000}
 
+runpod:
+  endpoint-url: ${RUNPOD_ENDPOINT_URL:https://api.runpod.ai/v2/pw8ukq72bavqde}
+  api-key: ${RUNPOD_API_KEY:}
+
 backend:
   url: ${BACKEND_SERVER_URL:http://localhost:8080}

@@ -21,8 +21,17 @@ public class AwsS3Config {
     @Value("${cloud.aws.region.static}")
     private String region;
 
+    @Value("${runpod.api-key:}")
+    private String runpodApiKey;
+
     @Bean
     public S3Presigner s3Presigner() {
+        System.out.println("===============================================");
+        System.out.println("  AWS S3 Configuration Setup");
+        System.out.println("  - Access Key ID : " + (accessKey != null ? accessKey : "Not Set"));
+        System.out.println("  - RunPod API Key: " + (runpodApiKey != null && !runpodApiKey.isBlank() ? "PRESENT (Length: " + runpodApiKey.length() + ")" : "EMPTY/MISSING"));
+        System.out.println("===============================================");
+
         AwsCredentialsProvider credentialsProvider;
         if (accessKey == null || accessKey.isBlank() || accessKey.contains("placeholder")) {
             // Fallback to default credentials provider chain (environment variables, ~/.aws/credentials, etc.)
