@@ -15,6 +15,7 @@ import com.humix.api.domain.musicGeneration.type.GenerationStatus;
 import com.humix.api.global.apiPayload.code.GeneralErrorCode;
 import com.humix.api.global.apiPayload.exception.GeneralException;
 import com.humix.api.global.security.userdetails.CustomUserDetails;
+import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -34,6 +35,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -132,6 +134,8 @@ public class MusicGenerationService {
         String refTrackName = referenceTrack != null ? referenceTrack.getAudioName() : null;
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
         
+        log.info("[MusicGeneration] Requesting song generation for taskId: {}, genre: {}, mood: {}, callback: {}", taskId, request.genre(), request.mood(), callbackUrl);
+
         AiGenerationRequest aiRequest = new AiGenerationRequest(
                 "generate",
                 taskId,
@@ -195,6 +199,8 @@ public class MusicGenerationService {
         // 6. AI 서버로 비동기 수정 요청
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
 
+        log.info("[MusicGeneration] Requesting prompt modification for taskId: {}, prompt: {}, callback: {}", taskId, request.prompt(), callbackUrl);
+
         AiModificationRequest aiRequest = new AiModificationRequest(
                 "modify",
                 taskId,
@@ -223,16 +229,23 @@ public class MusicGenerationService {
     }
 
     public SseEmitter subscribeTaskStream(String taskId) {
+        log.info("[MusicGeneration] SSE subscribe request received for taskId: {}", taskId);
         SseEmitter emitter = new SseEmitter(1000 * 60 * 5L); // 5분 타임아웃
         
         emitters.put(taskId, emitter);
+        log.info("[MusicGeneration] Registered SseEmitter for taskId: {}. Total active emitters: {}", taskId, emitters.size());
 
-        emitter.onCompletion(() -> emitters.remove(taskId));
+        emitter.onCompletion(() -> {
+            log.info("[MusicGeneration] SseEmitter completed for taskId: {}", taskId);
+            emitters.remove(taskId);
+        });
         emitter.onTimeout(() -> {
+            log.info("[MusicGeneration] SseEmitter timeout for taskId: {}", taskId);
             emitter.complete();
             emitters.remove(taskId);
         });
         emitter.onError((e) -> {
+            log.warn("[MusicGeneration] SseEmitter error for taskId: {}: {}", taskId, e.getMessage());
             emitter.complete();
             emitters.remove(taskId);
         });
@@ -246,6 +259,7 @@ public class MusicGenerationService {
             );
             emitter.send(SseEmitter.event().name("progress").data(initialProgress));
         } catch (Exception e) {
+            log.error("[MusicGeneration] Failed to send initial progress to SseEmitter for taskId: {}: {}", taskId, e.getMessage());
             emitter.complete();
             emitters.remove(taskId);
         }
@@ -278,6 +292,7 @@ public class MusicGenerationService {
 
     @Transactional
     public void completeTask(String taskId, MusicGenerationDTO.AiTaskCompletionRequest request) {
+        log.info("[MusicGeneration] Received completion callback for taskId: {}, audioUrl: {}", taskId, request.generatedAudioUrl());
         MusicGeneration musicGeneration = musicGenerationRepository.findByTaskId(taskId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 태스크 ID의 작업 정보가 존재하지 않습니다. ID: " + taskId));
 
@@ -292,6 +307,7 @@ public class MusicGenerationService {
 
         SseEmitter emitter = emitters.remove(taskId);
         if (emitter != null) {
+            log.info("[MusicGeneration] Found active SseEmitter for taskId: {}. Sending event...", taskId);
             try {
                 if (isFailed) {
                     emitter.send(SseEmitter.event().name("progress").data(
@@ -312,9 +328,12 @@ public class MusicGenerationService {
                     emitter.send(SseEmitter.event().name("complete").data(completeResponse));
                 }
                 emitter.complete();
+                log.info("[MusicGeneration] Successfully sent completion event to SseEmitter for taskId: {}", taskId);
             } catch (Exception e) {
-                // ignore
+                log.error("[MusicGeneration] Failed to send completion event to SseEmitter for taskId: {}: {}", taskId, e.getMessage());
             }
+        } else {
+            log.warn("[MusicGeneration] No active SseEmitter found for taskId: {} (probably timed out or client disconnected). Current emitter keys: {}", taskId, emitters.keySet());
         }
     }
 
