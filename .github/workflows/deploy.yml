@@ -41,6 +41,10 @@ jobs:
           echo "JWT_SECRET_KEY=${{ secrets.JWT_SECRET_KEY }}" >> .env
           echo "JWT_COOKIE_SECURE=${{ secrets.JWT_COOKIE_SECURE }}" >> .env
           echo "JWT_COOKIE_SAME_SITE=${{ secrets.JWT_COOKIE_SAME_SITE }}" >> .env
+          echo "AI_SERVER_URL=${{ vars.AI_SERVER_URL }}" >> .env
+          echo "AI_GENERATION_SERVER_URL=${{ vars.AI_GENERATION_SERVER_URL }}" >> .env
+          echo "RUNPOD_ENDPOINT_URL=${{ vars.RUNPOD_ENDPOINT_URL }}" >> .env
+          echo "RUNPOD_API_KEY=${{ secrets.RUNPOD_API_KEY }}" >> .env
           echo "DEPLOY_TIME=$(TZ='Asia/Seoul' date +'%Y-%m-%d %H:%M KST')" >> .env
 
       - name: 6. EC2로 파일 전송 (jar, 도커 설정 파일 등)
@@ -50,7 +54,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           # 빌드된 jar와 도커 관련 파일, 환경변수 파일을 EC2로 복사
-          source: "build/libs/*-SNAPSHOT.jar, Dockerfile, docker-compose.yml, .env"
+          source: "build/libs/*-SNAPSHOT.jar, Dockerfile, docker-compose.yml, .env, ai-cpu"
           target: "/home/${{ secrets.EC2_USERNAME }}/humix-${{ env.ENV_NAME }}"
           strip_components: 0
 

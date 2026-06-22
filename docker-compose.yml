@@ -35,9 +35,21 @@ services:
       - DEPLOY_TIME=${DEPLOY_TIME}
       - SPRING_PROFILES_ACTIVE=${ENV}
       - SPRING_DATASOURCE_URL=jdbc:mariadb://humix-db-${ENV}:3306/humix
-      - AI_SERVER_URL=https://RunPod주소
+      - AI_SERVER_URL=${AI_SERVER_URL}
+      - AI_GENERATION_SERVER_URL=${AI_GENERATION_SERVER_URL}
+      - RUNPOD_ENDPOINT_URL=${RUNPOD_ENDPOINT_URL}
+      - RUNPOD_API_KEY=${RUNPOD_API_KEY}
     depends_on:
       humix-db:
         condition: service_healthy
+    networks:
+      - humix-network
+
+  humix-ai-cpu:
+    build:
+      context: ./ai-cpu
+    container_name: humix-ai-cpu-${ENV}
+    ports:
+      - "8001:8000"
     networks:
       - humix-network

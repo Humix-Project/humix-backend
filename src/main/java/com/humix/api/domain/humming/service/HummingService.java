@@ -36,12 +36,6 @@ public class HummingService {
     @Value("${ai.server.url}")
     private String aiServerUrl;
 
-    @Value("${runpod.endpoint-url}")
-    private String runpodEndpointUrl;
-
-    @Value("${runpod.api-key}")
-    private String runpodApiKey;
-
     @Value("${cloud.aws.s3.bucket}")
     private String bucket;
 
@@ -55,81 +49,16 @@ public class HummingService {
         // 2. S3 URL을 가져와 비공개 버킷인 경우도 접근 가능하도록 임시 Presigned GET URL을 생성합니다.
         String presignedGetUrl = generatePresignedGetUrl(humming.getS3FileUrl());
 
-        // 3. RunPod Serverless 통신 파이프라인 개방 (Trailing slash 처리로 RFC 3986 경로 유실 방지)
-        String baseUrl = runpodEndpointUrl.endsWith("/") ? runpodEndpointUrl : runpodEndpointUrl + "/";
+        // 3. FastAPI 통신 파이프라인 개방 (Trailing slash 처리로 RFC 3986 경로 유실 방지)
+        String baseUrl = aiServerUrl.endsWith("/") ? aiServerUrl : aiServerUrl + "/";
         WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
 
-        Map<?, ?> runpodResponse = webClient.post()
-                .uri("runsync")
-                .header("Authorization", "Bearer " + runpodApiKey)
-                .bodyValue(Map.of("input", Map.of("action", "melody-extract", "s3_url", presignedGetUrl)))
+        List<?> rawResponse = webClient.post()
+                .uri("api/v1/ai/melody-extract")
+                .bodyValue(Map.of("s3_url", presignedGetUrl))
                 .retrieve()
-                .bodyToMono(Map.class)
+                .bodyToMono(List.class)
                 .block();
-
-        if (runpodResponse == null) {
-            throw new IllegalStateException("RunPod 응답이 비어있습니다.");
-        }
-
-        String status = (String) runpodResponse.get("status");
-        String taskId = (String) runpodResponse.get("id");
-
-        if ("IN_QUEUE".equals(status) || "IN_PROGRESS".equals(status)) {
-            if (taskId == null) {
-                throw new IllegalStateException("RunPod 응답의 ID가 존재하지 않습니다. 응답: " + runpodResponse);
-            }
-
-            // 폴링 시작 (최대 300초, 3초 간격 = 최대 100회 시도)
-            int maxAttempts = 100;
-            int attempt = 0;
-            boolean completed = false;
-
-            while (attempt < maxAttempts) {
-                try {
-                    Thread.sleep(3000); // 3초 대기
-                } catch (InterruptedException e) {
-                    Thread.currentThread().interrupt();
-                    throw new IllegalStateException("폴링 중 인터럽트가 발생했습니다.", e);
-                }
-                attempt++;
-
-                runpodResponse = webClient.get()
-                        .uri("status/" + taskId)
-                        .header("Authorization", "Bearer " + runpodApiKey)
-                        .retrieve()
-                        .bodyToMono(Map.class)
-                        .block();
-
-                if (runpodResponse == null) {
-                    continue;
-                }
-
-                status = (String) runpodResponse.get("status");
-                if ("COMPLETED".equals(status)) {
-                    completed = true;
-                    break;
-                } else if ("FAILED".equals(status)) {
-                    throw new IllegalStateException("RunPod 작업 실행에 실패했습니다. 응답: " + runpodResponse);
-                }
-            }
-
-            if (!completed) {
-                throw new IllegalStateException("RunPod 작업 완료 대기 시간이 초과되었습니다 (300초). 마지막 응답: " + runpodResponse);
-            }
-        }
-
-        // RunPod 응답: {"id": "...", "status": "COMPLETED", "output": {"result_vector": [...]}}
-        Object outputObj = runpodResponse != null ? runpodResponse.get("output") : null;
-        List<?> rawResponse = null;
-        if (outputObj instanceof Map<?, ?> outputMap) {
-            Object resultVector = outputMap.get("result_vector");
-            if (resultVector instanceof List<?>) {
-                rawResponse = (List<?>) resultVector;
-            }
-        }
-        if (rawResponse == null) {
-            throw new IllegalStateException("멘로디 벡터화 응답이 유효하지 않습니다. RunPod 응답: " + runpodResponse);
-        }
 
         try {
             // 2. objectMapper와 TypeReference를 사용하여 명확한 타입으로 안전하게 변환합니다.
