@@ -63,6 +63,10 @@ jobs:
           script: |
             cd /home/${{ secrets.EC2_USERNAME }}/humix-${{ env.ENV_NAME }}
             # 기존 컨테이너를 내리고, 새 이미지를 빌드하여 백그라운드에서 실행
-            docker compose --project-name humix-${{ env.ENV_NAME }} --env-file .env up --build -d
+            if docker compose version >/dev/null 2>&1; then
+              docker compose --project-name humix-${{ env.ENV_NAME }} --env-file .env up --build -d
+            else
+              docker-compose --project-name humix-${{ env.ENV_NAME }} --env-file .env up --build -d
+            fi
             # 사용하지 않는 이전 도커 찌꺼기 이미지 정리 (용량 확보)
             docker image prune -f
