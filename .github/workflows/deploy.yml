@@ -50,7 +50,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           # 빌드된 jar와 도커 관련 파일, 환경변수 파일을 EC2로 복사
-          source: "build/libs/*-SNAPSHOT.jar, Dockerfile, docker-compose.yml, .env"
+          source: "build/libs/*-SNAPSHOT.jar, Dockerfile, docker-compose.yml, .env, ai-cpu"
           target: "/home/${{ secrets.EC2_USERNAME }}/humix-${{ env.ENV_NAME }}"
           strip_components: 0
 
