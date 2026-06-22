@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+pydantic
+librosa
+numpy
+scipy
+requests
+soundfile
