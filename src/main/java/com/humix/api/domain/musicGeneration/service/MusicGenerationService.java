@@ -46,8 +46,8 @@ public class MusicGenerationService {
     private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper;
 
-    @Value("${ai.server.url}")
-    private String aiServerUrl;
+    @Value("${ai.generation-server.url}")
+    private String aiGenerationServerUrl;
 
     @Value("${backend.url}")
     private String backendUrl;
@@ -131,7 +131,7 @@ public class MusicGenerationService {
                 presignedUrl
         );
 
-        String baseUrl = aiServerUrl.endsWith("/") ? aiServerUrl : aiServerUrl + "/";
+        String baseUrl = aiGenerationServerUrl.endsWith("/") ? aiGenerationServerUrl : aiGenerationServerUrl + "/";
         WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
         try {
             webClient.post()
@@ -189,7 +189,7 @@ public class MusicGenerationService {
                 presignedUrl
         );
 
-        String baseUrl = aiServerUrl.endsWith("/") ? aiServerUrl : aiServerUrl + "/";
+        String baseUrl = aiGenerationServerUrl.endsWith("/") ? aiGenerationServerUrl : aiGenerationServerUrl + "/";
         WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
         try {
             webClient.post()
