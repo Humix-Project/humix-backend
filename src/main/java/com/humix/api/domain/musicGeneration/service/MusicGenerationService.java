@@ -46,14 +46,20 @@ public class MusicGenerationService {
     private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper;
 
-    @Value("${ai.generation-server.url}")
-    private String aiGenerationServerUrl;
+    @Value("${ai.server.url}")
+    private String aiServerUrl;
 
     @Value("${backend.url}")
     private String backendUrl;
 
     @Value("${cloud.aws.s3.bucket}")
     private String bucket;
+
+    @Value("${runpod.endpoint-url}")
+    private String runpodEndpointUrl;
+
+    @Value("${runpod.api-key}")
+    private String runpodApiKey;
 
     // Concurrent map to keep track of active SSE Emitters
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
@@ -65,6 +71,7 @@ public class MusicGenerationService {
     ) {}
 
     private record AiGenerationRequest(
+            String action,
             @JsonProperty("task_id") String taskId,
             @JsonProperty("melody_vectors") List<AiMelodyVector> melodyVectors,
             String genre,
@@ -75,12 +82,16 @@ public class MusicGenerationService {
     ) {}
 
     private record AiModificationRequest(
+            String action,
             @JsonProperty("task_id") String taskId,
             @JsonProperty("melody_vectors") List<AiMelodyVector> melodyVectors,
             String prompt,
             @JsonProperty("callback_url") String callbackUrl,
             @JsonProperty("presigned_url") String presignedUrl
     ) {}
+
+    // RunPod Serverless 요청 래퍼: {"input": {...}}
+    private record RunpodRequest(Object input) {}
 
     @Transactional
     public MusicGenerationDTO.TaskAcceptedResponse generateSong(CustomUserDetails userDetails,
@@ -122,6 +133,7 @@ public class MusicGenerationService {
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
         
         AiGenerationRequest aiRequest = new AiGenerationRequest(
+                "generate",
                 taskId,
                 melodyVectors,
                 request.genre(),
@@ -131,12 +143,14 @@ public class MusicGenerationService {
                 presignedUrl
         );
 
-        String baseUrl = aiGenerationServerUrl.endsWith("/") ? aiGenerationServerUrl : aiGenerationServerUrl + "/";
+        // RunPod Serverless: POST /run with {"input": {...}} (Trailing slash treatment & relative URI)
+        String baseUrl = runpodEndpointUrl.endsWith("/") ? runpodEndpointUrl : runpodEndpointUrl + "/";
         WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
         try {
             webClient.post()
-                    .uri("internal/v1/ai/generation/songs")
-                    .bodyValue(aiRequest)
+                    .uri("run")
+                    .header("Authorization", "Bearer " + runpodApiKey)
+                    .bodyValue(new RunpodRequest(aiRequest))
                     .retrieve()
                     .toBodilessEntity()
                     .block();
@@ -182,6 +196,7 @@ public class MusicGenerationService {
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
 
         AiModificationRequest aiRequest = new AiModificationRequest(
+                "modify",
                 taskId,
                 melodyVectors,
                 request.prompt(),
@@ -189,12 +204,14 @@ public class MusicGenerationService {
                 presignedUrl
         );
 
-        String baseUrl = aiGenerationServerUrl.endsWith("/") ? aiGenerationServerUrl : aiGenerationServerUrl + "/";
+        // RunPod Serverless: POST /run with {"input": {...}} (Trailing slash treatment & relative URI)
+        String baseUrl = runpodEndpointUrl.endsWith("/") ? runpodEndpointUrl : runpodEndpointUrl + "/";
         WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
         try {
             webClient.post()
-                    .uri("internal/v1/ai/generation/songs/" + songId + "/modifications")
-                    .bodyValue(aiRequest)
+                    .uri("run")
+                    .header("Authorization", "Bearer " + runpodApiKey)
+                    .bodyValue(new RunpodRequest(aiRequest))
                     .retrieve()
                     .toBodilessEntity()
                     .block();

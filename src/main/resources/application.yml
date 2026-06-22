@@ -20,3 +20,7 @@ ai:
 
 backend:
   url: ${BACKEND_SERVER_URL:http://localhost:8080}
+
+runpod:
+  endpoint-url: ${RUNPOD_ENDPOINT_URL:https://api.runpod.ai/v2/pw8ukq72bavqde}
+  api-key: ${RUNPOD_API_KEY:}
