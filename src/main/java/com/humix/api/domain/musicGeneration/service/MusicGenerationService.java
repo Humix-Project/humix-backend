@@ -143,11 +143,12 @@ public class MusicGenerationService {
                 presignedUrl
         );
 
-        // RunPod Serverless: POST /run with {"input": {...}}
-        WebClient webClient = webClientBuilder.baseUrl(runpodEndpointUrl).build();
+        // RunPod Serverless: POST /run with {"input": {...}} (Trailing slash treatment & relative URI)
+        String baseUrl = runpodEndpointUrl.endsWith("/") ? runpodEndpointUrl : runpodEndpointUrl + "/";
+        WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
         try {
             webClient.post()
-                    .uri("/run")
+                    .uri("run")
                     .header("Authorization", "Bearer " + runpodApiKey)
                     .bodyValue(new RunpodRequest(aiRequest))
                     .retrieve()
@@ -203,11 +204,12 @@ public class MusicGenerationService {
                 presignedUrl
         );
 
-        // RunPod Serverless: POST /run with {"input": {...}}
-        WebClient webClient = webClientBuilder.baseUrl(runpodEndpointUrl).build();
+        // RunPod Serverless: POST /run with {"input": {...}} (Trailing slash treatment & relative URI)
+        String baseUrl = runpodEndpointUrl.endsWith("/") ? runpodEndpointUrl : runpodEndpointUrl + "/";
+        WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
         try {
             webClient.post()
-                    .uri("/run")
+                    .uri("run")
                     .header("Authorization", "Bearer " + runpodApiKey)
                     .bodyValue(new RunpodRequest(aiRequest))
                     .retrieve()

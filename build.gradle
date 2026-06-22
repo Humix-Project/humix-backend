@@ -24,6 +24,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    runtimeOnly 'io.netty:netty-resolver-dns-native-macos:4.1.119.Final:osx-aarch_64'
 
     // 2. Database/S3
     runtimeOnly 'org.mariadb.jdbc:mariadb-java-client'
