@@ -93,8 +93,7 @@ public class SecurityConfig {
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
 
         // 허용할 헤더
-        // 🛑프론트와의 연결테스트를 위해 코드를 바꿔두었습니다🛑
-        // configuration.setAllowedHeaders(List.of("*"));
+        configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowedOriginPatterns(List.of("*"));
 
         // 프론트엔드에서 인증 정보(JWT 토큰, 쿠키 등)를 보낼 수 있도록 허용
