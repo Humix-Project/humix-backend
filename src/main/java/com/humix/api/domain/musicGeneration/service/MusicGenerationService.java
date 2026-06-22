@@ -131,10 +131,11 @@ public class MusicGenerationService {
                 presignedUrl
         );
 
-        WebClient webClient = webClientBuilder.baseUrl(aiServerUrl).build();
+        String baseUrl = aiServerUrl.endsWith("/") ? aiServerUrl : aiServerUrl + "/";
+        WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
         try {
             webClient.post()
-                    .uri("/internal/v1/ai/generation/songs")
+                    .uri("internal/v1/ai/generation/songs")
                     .bodyValue(aiRequest)
                     .retrieve()
                     .toBodilessEntity()
@@ -188,10 +189,11 @@ public class MusicGenerationService {
                 presignedUrl
         );
 
-        WebClient webClient = webClientBuilder.baseUrl(aiServerUrl).build();
+        String baseUrl = aiServerUrl.endsWith("/") ? aiServerUrl : aiServerUrl + "/";
+        WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
         try {
             webClient.post()
-                    .uri("/internal/v1/ai/generation/songs/" + songId + "/modifications")
+                    .uri("internal/v1/ai/generation/songs/" + songId + "/modifications")
                     .bodyValue(aiRequest)
                     .retrieve()
                     .toBodilessEntity()
