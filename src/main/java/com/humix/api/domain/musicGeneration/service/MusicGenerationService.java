@@ -230,10 +230,57 @@ public class MusicGenerationService {
 
     public SseEmitter subscribeTaskStream(String taskId) {
         log.info("[MusicGeneration] SSE subscribe request received for taskId: {}", taskId);
+        
+        // 1. DB에서 현재 태스크 상태 조회
+        MusicGeneration musicGeneration = musicGenerationRepository.findByTaskId(taskId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 태스크 ID의 작업 정보가 존재하지 않습니다. ID: " + taskId));
+                
         SseEmitter emitter = new SseEmitter(1000 * 60 * 5L); // 5분 타임아웃
         
+        // 2. 만약 이미 완료된 상태라면 즉시 완료 이벤트 전송 후 종료
+        if (musicGeneration.getStatus() == GenerationStatus.COMPLETED) {
+            log.info("[MusicGeneration] Task {} is already COMPLETED. Sending immediate complete event.", taskId);
+            try {
+                emitter.send(SseEmitter.event().name("connect").data("Connected successfully"));
+                
+                MusicGenerationDTO.CompletionResult result = new MusicGenerationDTO.CompletionResult(
+                        taskId,
+                        musicGeneration.getId(),
+                        musicGeneration.getResultS3Url(),
+                        musicGeneration.getDurationSeconds()
+                );
+                MusicGenerationDTO.CompletionStreamResponse completeResponse = new MusicGenerationDTO.CompletionStreamResponse(
+                        "COMPLETED",
+                        result
+                );
+                emitter.send(SseEmitter.event().name("complete").data(completeResponse));
+                emitter.complete();
+            } catch (Exception e) {
+                log.error("[MusicGeneration] Failed to send immediate completion event for taskId: {}: {}", taskId, e.getMessage());
+                emitter.completeWithError(e);
+            }
+            return emitter;
+        }
+        
+        // 3. 만약 실패/취소된 상태라면 즉시 실패/취소 이벤트 전송 후 종료
+        if (musicGeneration.getStatus() == GenerationStatus.FAILED || musicGeneration.getStatus() == GenerationStatus.CANCELED) {
+            log.info("[MusicGeneration] Task {} is already {}. Sending immediate status event.", taskId, musicGeneration.getStatus());
+            try {
+                emitter.send(SseEmitter.event().name("connect").data("Connected successfully"));
+                emitter.send(SseEmitter.event().name("progress").data(
+                        new MusicGenerationDTO.ProgressStreamResponse(taskId, musicGeneration.getStatus().name(), 0)
+                ));
+                emitter.complete();
+            } catch (Exception e) {
+                log.error("[MusicGeneration] Failed to send immediate status event for taskId: {}: {}", taskId, e.getMessage());
+                emitter.completeWithError(e);
+            }
+            return emitter;
+        }
+
+        // 4. 아직 진행 중인 경우(PROCESSING)에만 emitters 맵에 등록하고 콜백 대기
         emitters.put(taskId, emitter);
-        log.info("[MusicGeneration] Registered SseEmitter for taskId: {}. Total active emitters: {}", taskId, emitters.size());
+        log.info("[MusicGeneration] Registered SseEmitter for active taskId: {}. Total active emitters: {}", taskId, emitters.size());
 
         emitter.onCompletion(() -> {
             log.info("[MusicGeneration] SseEmitter completed for taskId: {}", taskId);
@@ -250,7 +297,7 @@ public class MusicGenerationService {
             emitters.remove(taskId);
         });
 
-        // 초기 연결 성공 통지 및 0% progress 전송
+        // 초기 연결 성공 및 0% 진행 상태 전송
         try {
             emitter.send(SseEmitter.event().name("connect").data("Connected successfully"));
             
