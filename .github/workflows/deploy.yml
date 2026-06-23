@@ -72,5 +72,6 @@ jobs:
             else
               docker-compose --project-name humix-${{ env.ENV_NAME }} --env-file .env up --build -d
             fi
-            # 사용하지 않는 이전 도커 찌꺼기 이미지 정리 (용량 확보)
-            docker image prune -f
+            # 사용하지 않는 이전 도커 이미지 및 빌드 캐시 전면 정리 (8GB 용량 부족 대비)
+            docker image prune -a -f
+            docker builder prune -a -f
