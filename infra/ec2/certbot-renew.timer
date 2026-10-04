@@ -1,0 +1,16 @@
+# Let's Encrypt 인증서 자동 갱신 타이머
+# 설치 위치: /etc/systemd/system/certbot-renew.timer
+# 하루 두 번 certbot-renew.service를 실행합니다.
+# certbot은 만료 30일 이내일 때만 실제로 갱신하므로 자주 실행해도 괜찮습니다.
+
+[Unit]
+Description=Run certbot renewal twice daily
+
+[Timer]
+OnCalendar=*-*-* 03,15:00:00
+RandomizedDelaySec=1h
+# 서버가 꺼져 있어서 놓친 실행은 부팅 후 바로 실행
+Persistent=true
+
+[Install]
+WantedBy=timers.target
