@@ -1,0 +1,13 @@
+# Let's Encrypt 인증서 갱신 서비스
+# 설치 위치: /etc/systemd/system/certbot-renew.service
+# certbot-renew.timer에 의해 주기적으로 실행됩니다.
+
+[Unit]
+Description=Certbot renewal
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+# 서버에서 `which certbot`으로 확인한 경로와 같아야 합니다.
+ExecStart=/usr/bin/certbot renew -q
