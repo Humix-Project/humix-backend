@@ -5,6 +5,7 @@ import com.humix.api.domain.musicGeneration.service.MusicGenerationService;
 import com.humix.api.global.apiPayload.ApiResponse;
 import com.humix.api.global.apiPayload.code.GeneralSuccessCode;
 import com.humix.api.global.security.userdetails.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +23,7 @@ public class GenerationController implements GenerationControllerDocs {
     @Override
     public ApiResponse<MusicGenerationDTO.TaskAcceptedResponse> generateSong(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @RequestBody MusicGenerationDTO.SongCreateRequest request) {
+            @Valid @RequestBody MusicGenerationDTO.SongCreateRequest request) {
         
         MusicGenerationDTO.TaskAcceptedResponse result = musicGenerationService.generateSong(userDetails, request);
         return ApiResponse.onSuccess(GeneralSuccessCode.ACCEPTED, result);
@@ -49,7 +50,7 @@ public class GenerationController implements GenerationControllerDocs {
     public ApiResponse<MusicGenerationDTO.TaskAcceptedResponse> modifySongPrompt(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("song_id") Long songId,
-            @RequestBody MusicGenerationDTO.SongModificationRequest request) {
+            @Valid @RequestBody MusicGenerationDTO.SongModificationRequest request) {
         
         MusicGenerationDTO.TaskAcceptedResponse result = musicGenerationService.modifySongPrompt(userDetails, songId, request);
         return ApiResponse.onSuccess(GeneralSuccessCode.ACCEPTED, result);

@@ -100,7 +100,7 @@ public class MusicGenerationService {
 
         // 1. MelodyScore 로드
         MelodyScore melodyScore = melodyScoreRepository.findByHummingId(request.hummingId())
-                .orElseThrow(() -> new IllegalArgumentException("해당 허밍의 멜로디 악보가 존재하지 않습니다. ID: " + request.hummingId()));
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.MELODY_SCORE_NOT_FOUND));
 
         // 2. Task ID 생성
         String taskId = "task_" + UUID.randomUUID().toString();
@@ -162,7 +162,7 @@ public class MusicGenerationService {
 
         // 1. 기존 완성곡(Parent) 로드
         MusicGeneration parentGeneration = musicGenerationRepository.findById(songId)
-                .orElseThrow(() -> new IllegalArgumentException("수정의 대상이 되는 원본 곡이 존재하지 않습니다. ID: " + songId));
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.GENERATION_NOT_FOUND));
 
         MelodyScore melodyScore = parentGeneration.getMelodyScore();
 
@@ -220,7 +220,7 @@ public class MusicGenerationService {
         
         // 1. DB에서 현재 태스크 상태 조회
         MusicGeneration musicGeneration = musicGenerationRepository.findByTaskId(taskId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 태스크 ID의 작업 정보가 존재하지 않습니다. ID: " + taskId));
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.TASK_NOT_FOUND));
                 
         SseEmitter emitter = new SseEmitter(1000 * 60 * 5L); // 5분 타임아웃
         
@@ -304,7 +304,7 @@ public class MusicGenerationService {
     @Transactional
     public MusicGenerationDTO.TaskCancelResponse cancelTask(String taskId) {
         MusicGeneration musicGeneration = musicGenerationRepository.findByTaskId(taskId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 태스크 ID의 작업 정보가 존재하지 않습니다. ID: " + taskId));
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.TASK_NOT_FOUND));
 
         musicGeneration.updateStatus(GenerationStatus.CANCELED, null);
 
@@ -328,7 +328,7 @@ public class MusicGenerationService {
     public void completeTask(String taskId, MusicGenerationDTO.AiTaskCompletionRequest request) {
         log.info("[MusicGeneration] Received completion callback for taskId: {}, audioUrl: {}", taskId, request.generatedAudioUrl());
         MusicGeneration musicGeneration = musicGenerationRepository.findByTaskId(taskId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 태스크 ID의 작업 정보가 존재하지 않습니다. ID: " + taskId));
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.TASK_NOT_FOUND));
 
         String audioUrl = request.generatedAudioUrl();
         boolean isFailed = "FAILED".equalsIgnoreCase(audioUrl);

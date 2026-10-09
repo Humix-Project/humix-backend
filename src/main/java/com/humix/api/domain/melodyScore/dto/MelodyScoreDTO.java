@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.humix.api.domain.humming.entity.Humming;
 import com.humix.api.domain.melodyScore.entity.MelodyScore;
+import jakarta.validation.constraints.NotNull;
 import java.util.List;
 
 public class MelodyScoreDTO {
@@ -21,6 +22,7 @@ public class MelodyScoreDTO {
     //멜로디 벡터 수정 요청 Request Body
     public record MelodyUpdateRequest(
             @JsonProperty("humming_id") Long hummingId,
+            @NotNull(message = "notes는 필수입니다.")
             List<NoteDto> notes
     ) {
         public MelodyScore from(Humming humming) {

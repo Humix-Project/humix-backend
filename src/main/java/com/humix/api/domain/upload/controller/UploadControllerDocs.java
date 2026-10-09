@@ -20,17 +20,21 @@ public interface UploadControllerDocs {
     @Operation(summary = "오디오 Presigned URL 발급 API", description = "S3에 오디오 파일을 업로드하기 위한 URL과 Key를 발급받습니다. (.mp3, .wav만 허용)")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "지원하지 않는 확장자",
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
-                            examples = @ExampleObject(name = "확장자 에러",
-                                    value = "{\"isSuccess\":false, \"code\":\"UPLOAD400\", \"message\":\"지원하지 않는 오디오 확장자입니다.\", \"result\":null}")))
+                            examples = @ExampleObject(name = "검증 실패",
+                                    value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"audio_name\":\"audio_name은 필수입니다.\"}}")))
     })
     @PostMapping("/audio/presigned")
     ApiResponse<UploadDTO.AudioPresignedResponse> getPresignedUrl(@RequestBody UploadDTO.AudioPresignedRequest request);
 
     @Operation(summary = "허밍 오디오 메타데이터 저장 API", description = "S3 업로드 완료 후 허밍 파일의 메타데이터를 서버에 저장합니다.")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "검증 실패",
+                                    value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"file_key\":\"file_key는 필수입니다.\"}}")))
     })
     @PostMapping("/humming")
     ApiResponse<HummingDTO.HummingSaveResponse> saveHummingInfo(@AuthenticationPrincipal CustomUserDetails userDetails,

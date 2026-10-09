@@ -24,7 +24,7 @@ public interface HummingControllerDocs {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "오디오 데이터 없음",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
                             examples = @ExampleObject(name = "허밍 없음",
-                                    value = "{\"isSuccess\":false, \"code\":\"HUMMING404\", \"message\":\"해당 허밍 데이터를 찾을 수 없습니다.\", \"result\":null}")))
+                                    value = "{\"isSuccess\":false, \"code\":\"HUMMING4000\", \"message\":\"해당하는 허밍 기록이 존재하지 않습니다.\", \"result\":null}")))
     })
     @PostMapping("/{humming_id}/vectors")
     ApiResponse<MelodyScoreDTO.MelodyVectorResponse> convertHummingToVector(@AuthenticationPrincipal CustomUserDetails userDetails,
@@ -32,7 +32,15 @@ public interface HummingControllerDocs {
 
     @Operation(summary = "사용자 수정 멜로디 벡터 저장 API", description = "사용자가 웹 에디터에서 가공한 멜로디 노트 데이터를 업데이트합니다.")
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "검증 실패",
+                                    value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"notes\":\"notes는 필수입니다.\"}}"))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "멜로디 악보 없음",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "악보 없음",
+                                    value = "{\"isSuccess\":false, \"code\":\"MELODY4000\", \"message\":\"해당 허밍의 멜로디 악보가 존재하지 않습니다.\", \"result\":null}")))
     })
     @PutMapping("/{humming_id}/vectors")
     ApiResponse<MelodyScoreDTO.MelodyVectorResponse> updateHummingVector(

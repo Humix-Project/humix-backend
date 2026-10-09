@@ -19,10 +19,10 @@ public interface AuthControllerDocs {
     @Operation(summary = "게스트 로그인 API", description = "최초 접속 시 발급한 Device ID로 로그인하여 토큰을 발급받습니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "잘못된 요청",
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
-                            examples = @ExampleObject(name = "파라미터 에러",
-                                    value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":null}")))
+                            examples = @ExampleObject(name = "검증 실패",
+                                    value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"device_id\":\"device_id는 필수입니다.\"}}")))
     })
     @PostMapping("/guest-login")
     ApiResponse<MemberDTO.MemberResponse> guestLogin(@RequestBody MemberDTO.MemberRequest request,
@@ -34,7 +34,11 @@ public interface AuthControllerDocs {
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "인증 만료",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
                             examples = @ExampleObject(name = "리프레시 토큰 만료",
-                                    value = "{\"isSuccess\":false, \"code\":\"AUTH401\", \"message\":\"리프레시 토큰이 만료되었습니다. 다시 로그인해주세요.\", \"result\":null}")))
+                                    value = "{\"isSuccess\":false, \"code\":\"AUTH4001\", \"message\":\"리프레시 토큰이 만료되었습니다. 다시 로그인해주세요.\", \"result\":null}"))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "사용자 없음",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "사용자 없음",
+                                    value = "{\"isSuccess\":false, \"code\":\"MEMBER4000\", \"message\":\"해당하는 사용자가 존재하지 않습니다.\", \"result\":null}")))
     })
     @PostMapping("/silent-refresh")
     ApiResponse<MemberDTO.MemberResponse> silentRefresh(
