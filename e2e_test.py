@@ -180,8 +180,7 @@ resp = requests.post(
         "humming_id": humming_id,
         "title": "E2E Test Song",
         "genre": "pop",
-        "mood": "happy",
-        "reference_track_id": None
+        "mood": "happy"
     },
     headers=headers,
     timeout=15

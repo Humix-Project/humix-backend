@@ -2,7 +2,6 @@ package com.humix.api.domain.humming.dto;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.humix.api.domain.humming.entity.Humming;
-import com.humix.api.domain.humming.entity.ReferenceTrack;
 import com.humix.api.domain.member.entity.Member;
 import java.time.LocalDateTime;
 

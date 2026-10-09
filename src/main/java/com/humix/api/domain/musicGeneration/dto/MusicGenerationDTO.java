@@ -22,10 +22,7 @@ public class MusicGenerationDTO {
             String genre,
 
             @Schema(description = "분위기 (예: upbeat, calm, romantic, sad 등)", example = "upbeat")
-            String mood,
-
-            @Schema(description = "참조 트랙 ID (선택, 없으면 null)", example = "3", nullable = true)
-            @JsonProperty("reference_track_id") Long referenceTrackId
+            String mood
     ) {
         //DTO를 MusicGeneration 엔티티로 변환하는 매핑 메서드
         public MusicGeneration from(Member member, MelodyScore melodyScore) {
@@ -116,8 +113,7 @@ public class MusicGenerationDTO {
             @JsonProperty("humming_duration_seconds") double hummingDurationSeconds,
             @JsonProperty("melody_note_count") int melodyNoteCount,
             String genre,
-            String mood,
-            @JsonProperty("reference_track") Object referenceTrack
+            String mood
     ) {
         //엔티티 및 연관 데이터(Humming 등)를 조합하여 조회 응답 DTO로 변환하는 메서드
         public static GenerationDetailResponse from(MusicGeneration musicGeneration,
@@ -126,8 +122,7 @@ public class MusicGenerationDTO {
                     hummingDuration, //Humming 엔티티의 durationSeconds 등에서 조회
                     noteCount,       //MelodyScore 내부 notes_data JSON의 배열 길이 등에서 파싱
                     musicGeneration.getGenre(),
-                    musicGeneration.getAtmosphere(), //엔티티의 atmosphere를 mood 필드로 매핑
-                    null //기본값 null
+                    musicGeneration.getAtmosphere() //엔티티의 atmosphere를 mood 필드로 매핑
             );
         }
     }

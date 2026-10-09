@@ -3,8 +3,6 @@ package com.humix.api.domain.musicGeneration.service;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.humix.api.domain.humming.entity.ReferenceTrack;
-import com.humix.api.domain.humming.repository.ReferenceTrackRepository;
 import com.humix.api.domain.melodyScore.dto.MelodyScoreDTO;
 import com.humix.api.domain.melodyScore.entity.MelodyScore;
 import com.humix.api.domain.melodyScore.repository.MelodyScoreRepository;
@@ -43,7 +41,6 @@ public class MusicGenerationService {
 
     private final MusicGenerationRepository musicGenerationRepository;
     private final MelodyScoreRepository melodyScoreRepository;
-    private final ReferenceTrackRepository referenceTrackRepository;
     private final S3Presigner s3Presigner;
     private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper;
@@ -78,7 +75,6 @@ public class MusicGenerationService {
             @JsonProperty("melody_vectors") List<AiMelodyVector> melodyVectors,
             String genre,
             String mood,
-            @JsonProperty("reference_track") String referenceTrack,
             @JsonProperty("callback_url") String callbackUrl,
             @JsonProperty("presigned_url") String presignedUrl
     ) {}
@@ -106,32 +102,24 @@ public class MusicGenerationService {
         MelodyScore melodyScore = melodyScoreRepository.findByHummingId(request.hummingId())
                 .orElseThrow(() -> new IllegalArgumentException("해당 허밍의 멜로디 악보가 존재하지 않습니다. ID: " + request.hummingId()));
 
-        // 2. ReferenceTrack 로드 (옵션)
-        ReferenceTrack referenceTrack = null;
-        if (request.referenceTrackId() != null) {
-            referenceTrack = referenceTrackRepository.findById(request.referenceTrackId())
-                    .orElseThrow(() -> new IllegalArgumentException("해당 참조 곡이 존재하지 않습니다. ID: " + request.referenceTrackId()));
-        }
-
-        // 3. Task ID 생성
+        // 2. Task ID 생성
         String taskId = "task_" + UUID.randomUUID().toString();
 
-        // 4. S3 Presigned URL 생성
+        // 3. S3 Presigned URL 생성
         String uniqueFileName = UUID.randomUUID().toString() + "_variation.wav";
         String fileKey = "audio/" + uniqueFileName;
         String presignedUrl = generatePresignedUrl(fileKey);
 
-        // 5. MusicGeneration 엔티티 생성 및 영속화
+        // 4. MusicGeneration 엔티티 생성 및 영속화
         MusicGeneration musicGeneration = request.from(userDetails.getMember(), melodyScore);
         musicGeneration.updateTaskId(taskId);
         musicGeneration.updateDuration(30); // Default 30s
         musicGenerationRepository.save(musicGeneration);
 
-        // 6. Melody Vectors 파싱
+        // 5. Melody Vectors 파싱
         List<AiMelodyVector> melodyVectors = parseMelodyVectors(melodyScore.getNotesData());
 
-        // 7. AI 서버로 비동기 작곡 요청
-        String refTrackName = referenceTrack != null ? referenceTrack.getAudioName() : null;
+        // 6. AI 서버로 비동기 작곡 요청
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
         
         log.info("[MusicGeneration] Requesting song generation for taskId: {}, genre: {}, mood: {}, callback: {}", taskId, request.genre(), request.mood(), callbackUrl);
@@ -142,7 +130,6 @@ public class MusicGenerationService {
                 melodyVectors,
                 request.genre(),
                 request.mood(),
-                refTrackName,
                 callbackUrl,
                 presignedUrl
         );

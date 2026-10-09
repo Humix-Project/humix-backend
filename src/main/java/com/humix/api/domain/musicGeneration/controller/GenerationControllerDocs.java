@@ -22,8 +22,7 @@ public interface GenerationControllerDocs {
                     "- `humming_id`: 벡터화가 완료된 허밍의 ID (필수)\n" +
                     "- `title`: 생성할 곡 제목 (생략 시 기본값 '나의 허밍곡' 사용)\n" +
                     "- `genre`: 원하는 장르 (예: pop, jazz, classical, hiphop)\n" +
-                    "- `mood`: 원하는 분위기 (예: upbeat, calm, romantic, sad)\n" +
-                    "- `reference_track_id`: 참조할 트랙 ID (선택사항, 없으면 null)")
+                    "- `mood`: 원하는 분위기 (예: upbeat, calm, romantic, sad)")
     @RequestBody(
             required = true,
             content = @Content(
@@ -35,8 +34,7 @@ public interface GenerationControllerDocs {
                                     "  \"humming_id\": 1,\n" +
                                     "  \"title\": \"나의 첫 번째 곡\",\n" +
                                     "  \"genre\": \"pop\",\n" +
-                                    "  \"mood\": \"upbeat\",\n" +
-                                    "  \"reference_track_id\": 3\n" +
+                                    "  \"mood\": \"upbeat\"\n" +
                                     "}"
                     )
             )
