@@ -39,9 +39,10 @@ erDiagram
         varchar(30) name
         varchar(30) genre "nullable"
         varchar(50) atmosphere "nullable"
+        varchar(500) prompt "nullable"
         varchar(512) result_s3_url "nullable"
         varchar(100) task_id UK "nullable"
-        int duration_seconds "nullable"
+        double duration_seconds "nullable"
         varchar(20) status
         datetime created_at
     }
@@ -90,8 +91,9 @@ AI 음악 생성 결과. 수정(재생성)하면 원본을 바꾸지 않고 `par
 | name | 곡 제목 (기본값 "나의 허밍곡") |
 | genre | 장르 |
 | atmosphere | 분위기 (API의 `mood`) |
+| prompt | 사용자가 입력한 스타일 프롬프트 (선택, 최대 500자). 재생성 시 재사용 |
 | result_s3_url | 생성된 오디오 S3 URL. 완료 전에는 NULL |
 | task_id | 비동기 작업 ID (유니크) |
-| duration_seconds | 곡 길이 (초) |
+| duration_seconds | 곡 길이 (초). 요청 시에는 요청한 길이, AI 완료 콜백 이후에는 AI가 보고한 실제 길이 |
 | status | `PROCESSING` / `COMPLETED` / `FAILED` / `CANCELED` |
 | created_at | 요청 시각 |

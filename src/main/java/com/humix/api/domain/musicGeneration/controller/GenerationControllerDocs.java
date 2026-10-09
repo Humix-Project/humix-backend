@@ -22,7 +22,9 @@ public interface GenerationControllerDocs {
                     "- `humming_id`: 벡터화가 완료된 허밍의 ID (필수)\n" +
                     "- `title`: 생성할 곡 제목 (생략 시 기본값 '나의 허밍곡' 사용)\n" +
                     "- `genre`: 원하는 장르 (예: pop, jazz, classical, hiphop)\n" +
-                    "- `mood`: 원하는 분위기 (예: upbeat, calm, romantic, sad)")
+                    "- `mood`: 원하는 분위기 (예: upbeat, calm, romantic, sad)\n" +
+                    "- `prompt`: 원하는 스타일을 직접 서술하는 문장 (선택, 최대 500자)\n\n" +
+                    "곡 길이는 서버 설정값(기본 30초)으로 고정되며, 멜로디가 이 길이를 넘으면 `HUMMING4001`(400)로 거부됩니다.")
     @RequestBody(
             required = true,
             content = @Content(
@@ -34,7 +36,8 @@ public interface GenerationControllerDocs {
                                     "  \"humming_id\": 1,\n" +
                                     "  \"title\": \"나의 첫 번째 곡\",\n" +
                                     "  \"genre\": \"pop\",\n" +
-                                    "  \"mood\": \"upbeat\"\n" +
+                                    "  \"mood\": \"upbeat\",\n" +
+                                    "  \"prompt\": \"잔잔한 피아노 위주로, 후반부에 스트링이 들어오는 느낌\"\n" +
                                     "}"
                     )
             )
@@ -69,10 +72,14 @@ public interface GenerationControllerDocs {
                             )
                     )
             ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패",
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패 또는 허밍 길이 초과",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
-                            examples = @ExampleObject(name = "검증 실패",
-                                    value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"humming_id\":\"humming_id는 필수입니다.\"}}"))),
+                            examples = {
+                                    @ExampleObject(name = "검증 실패",
+                                            value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"humming_id\":\"humming_id는 필수입니다.\"}}"),
+                                    @ExampleObject(name = "허밍 길이 초과",
+                                            value = "{\"isSuccess\":false, \"code\":\"HUMMING4001\", \"message\":\"허밍은 최대 30초까지 가능합니다.\", \"result\":null}")
+                            })),
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "멜로디 악보 없음",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
                             examples = @ExampleObject(name = "악보 없음",
@@ -91,7 +98,7 @@ public interface GenerationControllerDocs {
                     "- `progress`: 진행률 업데이트 (status: PROCESSING, progress: 0~90)\n" +
                     "- `complete`: 작업 완료 시 전송 (status: COMPLETED / FAILED)\n\n" +
                     "**progress 이벤트 예시:** `{\"task_id\": \"task_xxx\", \"status\": \"PROCESSING\", \"progress\": 50}`\n\n" +
-                    "**complete 이벤트 예시:** `{\"status\": \"COMPLETED\", \"result\": {\"task_id\": \"task_xxx\", \"song_id\": 42, \"audio_url\": \"https://...\", \"duration_seconds\": 30}}`"
+                    "**complete 이벤트 예시:** `{\"status\": \"COMPLETED\", \"result\": {\"task_id\": \"task_xxx\", \"song_id\": 42, \"audio_url\": \"https://...\", \"duration_seconds\": 30.0}}`"
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "스트림 연결 성공"),

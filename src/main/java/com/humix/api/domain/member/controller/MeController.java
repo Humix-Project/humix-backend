@@ -50,7 +50,7 @@ public class MeController implements MeControllerDocs {
         List<MusicGenerationDTO.SongItemResponse> songItems = songPage.getContent().stream()
                 .map(song -> {
                     double hummingDuration = song.getMelodyScore().getHumming().getDurationSeconds();
-                    int duration = song.getDurationSeconds() != null ? song.getDurationSeconds() : 30;
+                    double duration = song.getDurationSeconds() != null ? song.getDurationSeconds() : 30.0;
                     return MusicGenerationDTO.SongItemResponse.of(song, hummingDuration, duration);
                 })
                 .collect(Collectors.toList());

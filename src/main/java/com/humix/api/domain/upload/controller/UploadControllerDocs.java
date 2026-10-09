@@ -28,13 +28,19 @@ public interface UploadControllerDocs {
     @PostMapping("/audio/presigned")
     ApiResponse<UploadDTO.AudioPresignedResponse> getPresignedUrl(@RequestBody UploadDTO.AudioPresignedRequest request);
 
-    @Operation(summary = "허밍 오디오 메타데이터 저장 API", description = "S3 업로드 완료 후 허밍 파일의 메타데이터를 서버에 저장합니다.")
+    @Operation(summary = "허밍 오디오 메타데이터 저장 API",
+            description = "S3 업로드 완료 후 허밍 파일의 메타데이터를 서버에 저장합니다.\n\n" +
+                    "허밍은 최대 30초까지 가능하며, `duration_seconds`가 이를 넘으면 `HUMMING4001`(400)로 거부됩니다.")
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공"),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패",
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패 또는 허밍 길이 초과",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
-                            examples = @ExampleObject(name = "검증 실패",
-                                    value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"file_key\":\"file_key는 필수입니다.\"}}")))
+                            examples = {
+                                    @ExampleObject(name = "검증 실패",
+                                            value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"file_key\":\"file_key는 필수입니다.\"}}"),
+                                    @ExampleObject(name = "허밍 길이 초과",
+                                            value = "{\"isSuccess\":false, \"code\":\"HUMMING4001\", \"message\":\"허밍은 최대 30초까지 가능합니다.\", \"result\":null}")
+                            }))
     })
     @PostMapping("/humming")
     ApiResponse<HummingDTO.HummingSaveResponse> saveHummingInfo(@AuthenticationPrincipal CustomUserDetails userDetails,

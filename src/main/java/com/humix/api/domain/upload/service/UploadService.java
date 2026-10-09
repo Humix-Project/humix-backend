@@ -4,6 +4,8 @@ import com.humix.api.domain.humming.dto.HummingDTO;
 import com.humix.api.domain.humming.entity.Humming;
 import com.humix.api.domain.humming.repository.HummingRepository;
 import com.humix.api.domain.upload.dto.UploadDTO;
+import com.humix.api.global.apiPayload.code.GeneralErrorCode;
+import com.humix.api.global.apiPayload.exception.GeneralException;
 import com.humix.api.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +28,10 @@ public class UploadService implements UploadInterface {
 
     @Value("${cloud.aws.s3.bucket}")
     private String bucket;
+
+    // 생성 길이가 곧 허밍 최대 길이다. 이보다 긴 허밍은 자르거나 늘리지 않고 거부한다.
+    @Value("${generation.duration-seconds}")
+    private int maxHummingSeconds;
 
     @Override
     public UploadDTO.AudioPresignedResponse getPresignedUrl(UploadDTO.AudioPresignedRequest request) {
@@ -56,6 +62,11 @@ public class UploadService implements UploadInterface {
     @Override
     public HummingDTO.HummingSaveResponse saveHummingInfo(CustomUserDetails userDetails,
                                                           HummingDTO.HummingSaveRequest request) {
+        // 1. 클라이언트가 보낸 길이 값 검증 (프론트 녹음 제한의 보조 검증)
+        if (request.durationSeconds() > maxHummingSeconds) {
+            throw new GeneralException(GeneralErrorCode.HUMMING_TOO_LONG);
+        }
+
         // 2. S3 실제 객체 표준 퍼블릭 URL 생성
         String s3FileUrl = String.format("https://%s.s3.amazonaws.com/%s", bucket, request.fileKey());
 

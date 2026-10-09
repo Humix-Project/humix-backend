@@ -50,8 +50,13 @@ public class MusicGeneration {
     @Column(name = "task_id", length = 100, unique = true)
     private String taskId;
 
+    // 사용자가 입력한 스타일 프롬프트 (선택). 재생성 시 재사용한다.
+    @Column(name = "prompt", length = 500)
+    private String prompt;
+
+    // 요청 시에는 요청한 길이, AI 완료 콜백 이후에는 AI가 보고한 실제 길이
     @Column(name = "duration_seconds")
-    private Integer durationSeconds;
+    private Double durationSeconds;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
@@ -63,13 +68,15 @@ public class MusicGeneration {
 
     @Builder
     public MusicGeneration(Member member, MelodyScore melodyScore, MusicGeneration parentGeneration,
-                           String name, String genre, String atmosphere, String taskId, Integer durationSeconds) {
+                           String name, String genre, String atmosphere, String prompt, String taskId,
+                           Double durationSeconds) {
         this.member = member;
         this.melodyScore = melodyScore;
         this.parentGeneration = parentGeneration;
         this.name = name != null ? name : "나의 허밍곡"; // Default 값 설정
         this.genre = genre;
         this.atmosphere = atmosphere;
+        this.prompt = prompt;
         this.taskId = taskId;
         this.durationSeconds = durationSeconds;
         this.status = GenerationStatus.PROCESSING; // 초기 상태 설정
@@ -92,7 +99,7 @@ public class MusicGeneration {
     }
 
     // 재생 시간 업데이트 메서드
-    public void updateDuration(Integer durationSeconds) {
+    public void updateDuration(Double durationSeconds) {
         this.durationSeconds = durationSeconds;
     }
 }
