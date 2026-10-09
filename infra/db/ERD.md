@@ -36,6 +36,7 @@ erDiagram
         varchar(36) uuid FK
         bigint melody_id FK
         bigint parent_generation_id FK "nullable"
+        bigint root_generation_id "index, 원본은 자기 자신"
         varchar(30) name
         varchar(30) genre "nullable"
         varchar(50) atmosphere "nullable"
@@ -45,6 +46,7 @@ erDiagram
         double duration_seconds "nullable"
         varchar(20) status
         datetime created_at
+        datetime deleted_at "nullable"
     }
 ```
 
@@ -88,6 +90,7 @@ AI 음악 생성 결과. 수정(재생성)하면 원본을 바꾸지 않고 `par
 | uuid | 생성한 사용자 (`member.uuid`) |
 | melody_id | 생성에 사용한 멜로디 (`melody_score.melody_id`) |
 | parent_generation_id | 수정 원본 (`music_generation.generation_id`). 최초 생성이면 NULL |
+| root_generation_id | 같은 곡의 버전 묶음 기준. 최초 생성곡은 자기 자신의 `generation_id`, 수정본은 부모의 값을 물려받음. FK는 두지 않음 (인덱스만) |
 | name | 곡 제목 (기본값 "나의 허밍곡") |
 | genre | 장르 |
 | atmosphere | 분위기 (API의 `mood`) |
@@ -97,3 +100,10 @@ AI 음악 생성 결과. 수정(재생성)하면 원본을 바꾸지 않고 `par
 | duration_seconds | 곡 길이 (초). 요청 시에는 요청한 길이, AI 완료 콜백 이후에는 AI가 보고한 실제 길이 |
 | status | `PROCESSING` / `COMPLETED` / `FAILED` / `CANCELED` |
 | created_at | 요청 시각 |
+| deleted_at | 버전 되돌리기로 무효화된 시각 (soft delete). NULL이면 유효 |
+
+**버전 정책**
+- 유효한 버전 = 같은 `root_generation_id` 중 `status = COMPLETED AND deleted_at IS NULL`
+- 버전 번호(`version_no`)는 컬럼 없이 유효한 버전을 `generation_id` 오름차순으로 센 값 (1부터)
+- 버전 N으로 되돌리면 같은 root에서 `generation_id`가 N보다 큰 행이 모두 soft delete 됨
+- `root_generation_id`가 생기기 전에 만든 곡은 배포 후 백필로 자기 자신의 `generation_id`를 채움 (`UPDATE music_generation SET root_generation_id = generation_id WHERE root_generation_id IS NULL;`, 기존 곡에 수정본이 없을 때만 유효)

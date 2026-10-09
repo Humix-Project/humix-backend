@@ -28,6 +28,7 @@ import software.amazon.awssdk.services.s3.presigner.model.PresignedPutObjectRequ
 
 import java.io.IOException;
 import java.time.Duration;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -132,6 +133,7 @@ public class MusicGenerationService {
         musicGeneration.updateTaskId(taskId);
         musicGeneration.updateDuration((double) generationDurationSeconds);
         musicGenerationRepository.save(musicGeneration);
+        musicGeneration.markAsRoot(); // 최초 생성곡은 자기 자신이 버전 묶음의 root
 
         // 6. AI 서버로 비동기 작곡 요청
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
@@ -177,7 +179,7 @@ public class MusicGenerationService {
         }
 
         // 1. 기존 완성곡(Parent) 로드
-        MusicGeneration parentGeneration = musicGenerationRepository.findById(songId)
+        MusicGeneration parentGeneration = musicGenerationRepository.findByIdAndDeletedAtIsNull(songId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.GENERATION_NOT_FOUND));
 
         MelodyScore melodyScore = parentGeneration.getMelodyScore();
@@ -229,6 +231,64 @@ public class MusicGenerationService {
         }
 
         return new MusicGenerationDTO.TaskAcceptedResponse(taskId);
+    }
+
+    /**
+     * 특정 버전으로 되돌린다: 같은 root에서 해당 버전보다 뒤(id가 더 큰)의 버전을 모두 soft delete.
+     * 같은 root에 진행 중인 작업이 있으면 되돌리기 중에 결과가 들어와 버전이 꼬이므로 거부한다.
+     */
+    @Transactional
+    public MusicGenerationDTO.RevertResponse revertToVersion(CustomUserDetails userDetails, Long generationId) {
+        requireLogin(userDetails);
+
+        MusicGeneration target = musicGenerationRepository
+                .findByIdAndStatusAndDeletedAtIsNull(generationId, GenerationStatus.COMPLETED)
+                .filter(generation -> isOwner(userDetails, generation))
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.GENERATION_NOT_FOUND));
+        Long rootId = target.getRootGenerationId();
+
+        if (musicGenerationRepository.existsByRootGenerationIdAndStatusAndDeletedAtIsNull(rootId, GenerationStatus.PROCESSING)) {
+            throw new GeneralException(GeneralErrorCode.GENERATION_IN_PROGRESS);
+        }
+
+        int deletedCount = musicGenerationRepository.softDeleteVersionsAfter(rootId, target.getId(), LocalDateTime.now());
+        log.info("[MusicGeneration] Reverted to generationId: {} (rootId: {}), soft deleted {} versions", generationId, rootId, deletedCount);
+
+        return new MusicGenerationDTO.RevertResponse(target.getId(), deletedCount);
+    }
+
+    /**
+     * 원본(root) 곡의 유효한 버전(완료 + soft delete 아님) 목록을 생성 순서대로 반환한다.
+     * 경로의 ID는 원본(최초 생성곡)의 ID여야 하며, 수정본의 ID이거나 타인의 곡이면 404.
+     */
+    public MusicGenerationDTO.VersionListResponse getVersions(CustomUserDetails userDetails, Long rootGenerationId) {
+        requireLogin(userDetails);
+
+        musicGenerationRepository.findByIdAndDeletedAtIsNull(rootGenerationId)
+                .filter(generation -> rootGenerationId.equals(generation.getRootGenerationId()))
+                .filter(generation -> isOwner(userDetails, generation))
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.GENERATION_NOT_FOUND));
+
+        List<MusicGeneration> versions = musicGenerationRepository
+                .findByRootGenerationIdAndStatusAndDeletedAtIsNullOrderByIdAsc(rootGenerationId, GenerationStatus.COMPLETED);
+
+        // versionNo는 컬럼 없이 조회 순서로 계산한다 (되돌리기로 번호가 비는 일이 없도록)
+        List<MusicGenerationDTO.VersionItemResponse> items = new ArrayList<>();
+        for (int i = 0; i < versions.size(); i++) {
+            items.add(MusicGenerationDTO.VersionItemResponse.of(versions.get(i), i + 1));
+        }
+        return new MusicGenerationDTO.VersionListResponse(rootGenerationId, items);
+    }
+
+    private void requireLogin(CustomUserDetails userDetails) {
+        if (userDetails == null || userDetails.getMember() == null) {
+            throw new GeneralException(GeneralErrorCode.LOGIN_REQUIRED);
+        }
+    }
+
+    // 타인의 곡은 존재 여부를 드러내지 않도록 호출부에서 404로 처리한다
+    private boolean isOwner(CustomUserDetails userDetails, MusicGeneration generation) {
+        return generation.getMember().getUuid().equals(userDetails.getMember().getUuid());
     }
 
     public SseEmitter subscribeTaskStream(String taskId) {

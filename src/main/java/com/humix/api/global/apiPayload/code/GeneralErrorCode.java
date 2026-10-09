@@ -32,6 +32,7 @@ public enum GeneralErrorCode implements BaseErrorCode{
 
     // GENERATION 관련 에러
     GENERATION_NOT_FOUND(HttpStatus.NOT_FOUND, "GENERATION4000", "해당하는 생성곡이 존재하지 않습니다."),
+    GENERATION_IN_PROGRESS(HttpStatus.CONFLICT, "GENERATION4001", "같은 곡의 다른 버전을 생성 중입니다. 완료되거나 취소된 후 다시 시도해주세요."),
 
     // TASK 관련 에러
     TASK_NOT_FOUND(HttpStatus.NOT_FOUND, "TASK4000", "해당 태스크 ID의 작업 정보가 존재하지 않습니다."),
