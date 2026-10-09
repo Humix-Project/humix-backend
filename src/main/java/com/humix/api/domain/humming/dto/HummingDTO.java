@@ -3,11 +3,13 @@ package com.humix.api.domain.humming.dto;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.humix.api.domain.humming.entity.Humming;
 import com.humix.api.domain.member.entity.Member;
+import jakarta.validation.constraints.NotBlank;
 import java.time.LocalDateTime;
 
 public class HummingDTO {
     //허밍 정보 저장 요청 Request
     public record HummingSaveRequest(
+            @NotBlank(message = "file_key는 필수입니다.")
             @JsonProperty("file_key") String fileKey,
             @JsonProperty("duration_seconds") int durationSeconds
     ) {

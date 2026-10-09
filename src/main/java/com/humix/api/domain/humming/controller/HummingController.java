@@ -5,6 +5,7 @@ import com.humix.api.domain.melodyScore.dto.MelodyScoreDTO;
 import com.humix.api.global.apiPayload.ApiResponse;
 import com.humix.api.global.apiPayload.code.GeneralSuccessCode;
 import com.humix.api.global.security.userdetails.CustomUserDetails;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -31,7 +32,7 @@ public class HummingController implements HummingControllerDocs {
     public ApiResponse<MelodyScoreDTO.MelodyVectorResponse> updateHummingVector(
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("humming_id") Long hummingId,
-            @RequestBody MelodyScoreDTO.MelodyUpdateRequest request) {
+            @Valid @RequestBody MelodyScoreDTO.MelodyUpdateRequest request) {
 
          MelodyScoreDTO.MelodyVectorResponse result = hummingService.updateHummingVector(hummingId, request);
 

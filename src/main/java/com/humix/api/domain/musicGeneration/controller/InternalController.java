@@ -5,6 +5,7 @@ import com.humix.api.domain.musicGeneration.service.MusicGenerationService;
 import com.humix.api.global.apiPayload.ApiResponse;
 import com.humix.api.global.apiPayload.code.GeneralSuccessCode;
 import io.swagger.v3.oas.annotations.Operation;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,7 +20,7 @@ public class InternalController {
     @PostMapping("/{task_id}/completion")
     public ApiResponse<Object> completeTask(
             @PathVariable("task_id") String taskId,
-            @RequestBody MusicGenerationDTO.AiTaskCompletionRequest request) {
+            @Valid @RequestBody MusicGenerationDTO.AiTaskCompletionRequest request) {
 
         musicGenerationService.completeTask(taskId, request);
         return ApiResponse.onSuccess(GeneralSuccessCode.OK, null);

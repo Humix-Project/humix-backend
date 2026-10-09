@@ -5,6 +5,8 @@ import com.humix.api.domain.melodyScore.entity.MelodyScore;
 import com.humix.api.domain.member.entity.Member;
 import com.humix.api.domain.musicGeneration.entity.MusicGeneration;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -13,6 +15,7 @@ public class MusicGenerationDTO {
     //노래 생성 요청 Request Body
     public record SongCreateRequest(
             @Schema(description = "허밍 ID", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
+            @NotNull(message = "humming_id는 필수입니다.")
             @JsonProperty("humming_id") Long hummingId,
 
             @Schema(description = "생성할 곡 제목", example = "나의 첫 번째 곡")
@@ -56,6 +59,7 @@ public class MusicGenerationDTO {
     public record SongModificationRequest(
             @Schema(description = "수정 방향 프롬프트 (예: 더 밝게, 템포를 빠르게 등)", example = "더 밝고 경쾌하게 수정해줘",
                     requiredMode = Schema.RequiredMode.REQUIRED)
+            @NotBlank(message = "prompt는 필수입니다.")
             String prompt
     ) {
         //프롬프트 수정곡(수정 버전) 요청 시 새로운 MusicGeneration 엔티티를 생성하는 매핑 메서드
@@ -197,12 +201,7 @@ public class MusicGenerationDTO {
 
     //AI 서버 작업 완료 콜백 Request Body
     public record AiTaskCompletionRequest(
+            @NotBlank(message = "generated_audio_url은 필수입니다.")
             @JsonProperty("generated_audio_url") String generatedAudioUrl
-    ) {
-        public AiTaskCompletionRequest {
-            if (generatedAudioUrl == null || generatedAudioUrl.isBlank()) {
-                throw new IllegalArgumentException("생성된 오디오 URL(generated_audio_url)은 필수입니다.");
-            }
-        }
-    }
+    ) {}
 }

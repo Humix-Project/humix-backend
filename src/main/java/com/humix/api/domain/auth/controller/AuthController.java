@@ -8,6 +8,7 @@ import com.humix.api.global.apiPayload.code.GeneralSuccessCode;
 import com.humix.api.global.apiPayload.exception.GeneralException;
 import com.humix.api.global.security.dto.TokenDto;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseCookie;
@@ -30,7 +31,7 @@ public class AuthController implements AuthControllerDocs {
     @PostMapping("/guest-login")
     @Override
     public ApiResponse<MemberDTO.MemberResponse> guestLogin(
-            @RequestBody MemberDTO.MemberRequest request,
+            @Valid @RequestBody MemberDTO.MemberRequest request,
             HttpServletResponse response) { // HttpServletResponse 주입받기
 
         // 토큰 발급

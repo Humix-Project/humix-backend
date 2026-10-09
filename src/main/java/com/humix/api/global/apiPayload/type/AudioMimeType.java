@@ -1,5 +1,7 @@
 package com.humix.api.global.apiPayload.type;
 
+import com.humix.api.global.apiPayload.code.GeneralErrorCode;
+import com.humix.api.global.apiPayload.exception.GeneralException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
@@ -20,6 +22,6 @@ public enum AudioMimeType {
                 return type;
             }
         }
-        throw new IllegalArgumentException("지원하지 않는 오디오 형식입니다: " + mimeType);
+        throw new GeneralException(GeneralErrorCode.UNSUPPORTED_AUDIO_TYPE);
     }
 }

@@ -7,6 +7,8 @@ import com.humix.api.domain.humming.repository.HummingRepository;
 import com.humix.api.domain.melodyScore.dto.MelodyScoreDTO;
 import com.humix.api.domain.melodyScore.entity.MelodyScore;
 import com.humix.api.domain.melodyScore.repository.MelodyScoreRepository;
+import com.humix.api.global.apiPayload.code.GeneralErrorCode;
+import com.humix.api.global.apiPayload.exception.GeneralException;
 import lombok.RequiredArgsConstructor;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Value;
@@ -44,7 +46,7 @@ public class HummingService {
     public MelodyScoreDTO.MelodyVectorResponse convertHummingToVector(Long hummingId) {
         // 1. 데이터베이스로부터 허밍 엔티티 및 적재된 S3 오디오 주소를 로드합니다.
         Humming humming = hummingRepository.findById(hummingId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 허밍 기록이 존재하지 않습니다. ID: " + hummingId));
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.HUMMING_NOT_FOUND));
 
         // 2. S3 URL을 가져와 비공개 버킷인 경우도 접근 가능하도록 임시 Presigned GET URL을 생성합니다.
         String presignedGetUrl = generatePresignedGetUrl(humming.getS3FileUrl());
@@ -148,11 +150,7 @@ public class HummingService {
 
         // 1. 기존 데이터베이스에 존재하는 멜로디 악보 레코드를 식별 조회합니다.
         MelodyScore existingMelodyScore = melodyScoreRepository.findByHummingId(hummingId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 허밍의 추출된 멜로디 벡터(MelodyScore)가 존재하지 않습니다. ID: " + hummingId));
-
-        if (request == null || request.notes() == null) {
-            throw new IllegalArgumentException("수정할 노트(notes) 데이터가 비어있습니다.");
-        }
+                .orElseThrow(() -> new GeneralException(GeneralErrorCode.MELODY_SCORE_NOT_FOUND));
 
         try {
             // 2. 프론트에서 넘어온 수정 노트 리스트를 JSON 문자열로 가공합니다.

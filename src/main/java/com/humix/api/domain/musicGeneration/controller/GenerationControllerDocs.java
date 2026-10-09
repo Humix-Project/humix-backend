@@ -68,7 +68,15 @@ public interface GenerationControllerDocs {
                                     value = "{\"isSuccess\": false, \"code\": \"AUTH4000\", \"message\": \"로그인이 필요한 기능입니다.\", \"result\": null}"
                             )
                     )
-            )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "검증 실패",
+                                    value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"humming_id\":\"humming_id는 필수입니다.\"}}"))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "멜로디 악보 없음",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "악보 없음",
+                                    value = "{\"isSuccess\":false, \"code\":\"MELODY4000\", \"message\":\"해당 허밍의 멜로디 악보가 존재하지 않습니다.\", \"result\":null}")))
     })
     @PostMapping("")
     ApiResponse<MusicGenerationDTO.TaskAcceptedResponse> generateSong(
@@ -86,7 +94,11 @@ public interface GenerationControllerDocs {
                     "**complete 이벤트 예시:** `{\"status\": \"COMPLETED\", \"result\": {\"task_id\": \"task_xxx\", \"song_id\": 42, \"audio_url\": \"https://...\", \"duration_seconds\": 30}}`"
     )
     @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "스트림 연결 성공")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "스트림 연결 성공"),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "태스크 없음",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "태스크 없음",
+                                    value = "{\"isSuccess\":false, \"code\":\"TASK4000\", \"message\":\"해당 태스크 ID의 작업 정보가 존재하지 않습니다.\", \"result\":null}")))
     })
     @GetMapping(value = "/tasks/{task_id}/stream", produces = "text/event-stream")
     SseEmitter subscribeTaskStream(@PathVariable("task_id") String taskId);
@@ -114,7 +126,11 @@ public interface GenerationControllerDocs {
                                             "}"
                             )
                     )
-            )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "태스크 없음",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "태스크 없음",
+                                    value = "{\"isSuccess\":false, \"code\":\"TASK4000\", \"message\":\"해당 태스크 ID의 작업 정보가 존재하지 않습니다.\", \"result\":null}")))
     })
     @DeleteMapping("/tasks/{task_id}")
     ApiResponse<MusicGenerationDTO.TaskCancelResponse> cancelTask(@PathVariable("task_id") String taskId);
@@ -166,7 +182,15 @@ public interface GenerationControllerDocs {
                                     value = "{\"isSuccess\": false, \"code\": \"AUTH4000\", \"message\": \"로그인이 필요한 기능입니다.\", \"result\": null}"
                             )
                     )
-            )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "검증 실패",
+                                    value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"prompt\":\"prompt는 필수입니다.\"}}"))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "원본 곡 없음",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "원본 곡 없음",
+                                    value = "{\"isSuccess\":false, \"code\":\"GENERATION4000\", \"message\":\"해당하는 생성곡이 존재하지 않습니다.\", \"result\":null}")))
     })
     @PostMapping("/{song_id}/modifications")
     ApiResponse<MusicGenerationDTO.TaskAcceptedResponse> modifySongPrompt(
