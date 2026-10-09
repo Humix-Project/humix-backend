@@ -7,6 +7,7 @@ import com.humix.api.domain.musicGeneration.entity.MusicGeneration;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -25,7 +26,11 @@ public class MusicGenerationDTO {
             String genre,
 
             @Schema(description = "분위기 (예: upbeat, calm, romantic, sad 등)", example = "upbeat")
-            String mood
+            String mood,
+
+            @Schema(description = "원하는 스타일을 직접 서술하는 프롬프트 (선택, 최대 500자)", example = "잔잔한 피아노 위주로, 후반부에 스트링이 들어오는 느낌")
+            @Size(max = 500, message = "prompt는 최대 500자까지 입력할 수 있습니다.")
+            String prompt
     ) {
         //DTO를 MusicGeneration 엔티티로 변환하는 매핑 메서드
         public MusicGeneration from(Member member, MelodyScore melodyScore) {
@@ -36,6 +41,7 @@ public class MusicGenerationDTO {
                     .name(this.title)
                     .genre(this.genre)
                     .atmosphere(this.mood)
+                    .prompt(this.prompt == null || this.prompt.isBlank() ? null : this.prompt)
                     .build();
         }
     }
@@ -72,6 +78,7 @@ public class MusicGenerationDTO {
                     .name(parentGeneration.getName() + " (수정본)")
                     .genre(parentGeneration.getGenre())
                     .atmosphere(parentGeneration.getAtmosphere())
+                    .prompt(parentGeneration.getPrompt())
                     .build();
         }
     }
@@ -99,8 +106,8 @@ public class MusicGenerationDTO {
             @Schema(description = "생성된 오디오 S3 URL", example = "https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav")
             @JsonProperty("audio_url") String audioUrl,
 
-            @Schema(description = "생성된 오디오 재생 시간 (초)", example = "30")
-            @JsonProperty("duration_seconds") int durationSeconds
+            @Schema(description = "생성된 오디오 재생 시간 (초)", example = "30.0")
+            @JsonProperty("duration_seconds") double durationSeconds
     ) {}
 
     //SSE Event: complete 데이터 구조
@@ -145,8 +152,8 @@ public class MusicGenerationDTO {
             @Schema(description = "원본 허밍 재생 시간 (초)", example = "12.5")
             @JsonProperty("humming_duration_seconds") double hummingDurationSeconds,
 
-            @Schema(description = "생성된 오디오 재생 시간 (초)", example = "30")
-            @JsonProperty("duration_seconds") int durationSeconds,
+            @Schema(description = "생성된 오디오 재생 시간 (초)", example = "30.0")
+            @JsonProperty("duration_seconds") double durationSeconds,
 
             @Schema(description = "생성된 오디오 S3 URL", example = "https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav")
             @JsonProperty("audio_url") String audioUrl,
@@ -156,7 +163,7 @@ public class MusicGenerationDTO {
     ) {
         //엔티티와 외부 조회 데이터를 조합하여 목록용 단일 객체로 변환하는 메서드
         public static SongItemResponse of(MusicGeneration musicGeneration, double hummingDuration,
-                                          int durationSeconds) {
+                                          double durationSeconds) {
             return new SongItemResponse(
                     musicGeneration.getId(),
                     musicGeneration.getName(), //엔티티의 name을 title 필드로 매핑
@@ -202,6 +209,9 @@ public class MusicGenerationDTO {
     //AI 서버 작업 완료 콜백 Request Body
     public record AiTaskCompletionRequest(
             @NotBlank(message = "generated_audio_url은 필수입니다.")
-            @JsonProperty("generated_audio_url") String generatedAudioUrl
+            @JsonProperty("generated_audio_url") String generatedAudioUrl,
+
+            // AI가 실제로 만든 오디오 길이(초). 실패 콜백이나 아직 이 필드를 보내지 않는 AI 서버에서는 null
+            @JsonProperty("duration_seconds") Double durationSeconds
     ) {}
 }

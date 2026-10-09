@@ -1,5 +1,6 @@
 package com.humix.api.domain.musicGeneration.service;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -39,6 +40,13 @@ import java.util.concurrent.ConcurrentHashMap;
 @Transactional(readOnly = true)
 public class MusicGenerationService {
 
+    // AI 서버가 업로드하는 결과 오디오용 presigned PUT URL 유효시간. RunPod 콜드스타트·대기열 + 생성 시간을 감안해 넉넉히 둔다.
+    private static final Duration PRESIGNED_UPLOAD_EXPIRATION = Duration.ofMinutes(30);
+
+    // 요청/응답 길이 비교 및 허밍 길이 검증에서 허용하는 오차(초). 멜로디가 0.1초 단위로 양자화되기 때문이다.
+    private static final double DURATION_TOLERANCE_SECONDS = 0.1;
+    private static final double FLOAT_EPSILON = 1e-9;
+
     private final MusicGenerationRepository musicGenerationRepository;
     private final MelodyScoreRepository melodyScoreRepository;
     private final S3Presigner s3Presigner;
@@ -60,6 +68,9 @@ public class MusicGenerationService {
     @Value("${runpod.api-key}")
     private String runpodApiKey;
 
+    @Value("${generation.duration-seconds}")
+    private int generationDurationSeconds;
+
     // Concurrent map to keep track of active SSE Emitters
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
@@ -75,6 +86,8 @@ public class MusicGenerationService {
             @JsonProperty("melody_vectors") List<AiMelodyVector> melodyVectors,
             String genre,
             String mood,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String prompt,
+            @JsonProperty("duration_seconds") int durationSeconds,
             @JsonProperty("callback_url") String callbackUrl,
             @JsonProperty("presigned_url") String presignedUrl
     ) {}
@@ -102,27 +115,28 @@ public class MusicGenerationService {
         MelodyScore melodyScore = melodyScoreRepository.findByHummingId(request.hummingId())
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.MELODY_SCORE_NOT_FOUND));
 
-        // 2. Task ID 생성
+        // 2. Melody Vectors 파싱 후 생성 길이를 넘는 멜로디는 AI 서버로 보내기 전에 거부
+        List<AiMelodyVector> melodyVectors = parseMelodyVectors(melodyScore.getNotesData());
+        validateMelodyLength(melodyVectors);
+
+        // 3. Task ID 생성
         String taskId = "task_" + UUID.randomUUID().toString();
 
-        // 3. S3 Presigned URL 생성
+        // 4. S3 Presigned URL 생성
         String uniqueFileName = UUID.randomUUID().toString() + "_variation.wav";
         String fileKey = "audio/" + uniqueFileName;
         String presignedUrl = generatePresignedUrl(fileKey);
 
-        // 4. MusicGeneration 엔티티 생성 및 영속화
+        // 5. MusicGeneration 엔티티 생성 및 영속화 (길이는 요청한 값으로 먼저 기록하고, 완료 콜백에서 실제 길이로 갱신)
         MusicGeneration musicGeneration = request.from(userDetails.getMember(), melodyScore);
         musicGeneration.updateTaskId(taskId);
-        musicGeneration.updateDuration(30); // Default 30s
+        musicGeneration.updateDuration((double) generationDurationSeconds);
         musicGenerationRepository.save(musicGeneration);
-
-        // 5. Melody Vectors 파싱
-        List<AiMelodyVector> melodyVectors = parseMelodyVectors(melodyScore.getNotesData());
 
         // 6. AI 서버로 비동기 작곡 요청
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
         
-        log.info("[MusicGeneration] Requesting song generation for taskId: {}, genre: {}, mood: {}, callback: {}", taskId, request.genre(), request.mood(), callbackUrl);
+        log.info("[MusicGeneration] Requesting song generation for taskId: {}, genre: {}, mood: {}, duration: {}s, callback: {}", taskId, request.genre(), request.mood(), generationDurationSeconds, callbackUrl);
 
         AiGenerationRequest aiRequest = new AiGenerationRequest(
                 "generate",
@@ -130,6 +144,8 @@ public class MusicGenerationService {
                 melodyVectors,
                 request.genre(),
                 request.mood(),
+                musicGeneration.getPrompt(),
+                generationDurationSeconds,
                 callbackUrl,
                 presignedUrl
         );
@@ -177,7 +193,7 @@ public class MusicGenerationService {
         // 4. 새로운 MusicGeneration 엔티티 생성 및 영속화
         MusicGeneration musicGeneration = request.from(userDetails.getMember(), melodyScore, parentGeneration);
         musicGeneration.updateTaskId(taskId);
-        musicGeneration.updateDuration(30); // Default 30s
+        musicGeneration.updateDuration((double) generationDurationSeconds); // 완료 콜백에서 AI가 보고한 실제 길이로 갱신
         musicGenerationRepository.save(musicGeneration);
 
         // 5. Melody Vectors 파싱
@@ -333,10 +349,19 @@ public class MusicGenerationService {
         String audioUrl = request.generatedAudioUrl();
         boolean isFailed = "FAILED".equalsIgnoreCase(audioUrl);
 
+        if (!isFailed && isDurationMismatch(musicGeneration, request.durationSeconds())) {
+            log.warn("[MusicGeneration] Duration mismatch for taskId: {}. requested: {}s, reported: {}s. Marking as FAILED.",
+                    taskId, musicGeneration.getDurationSeconds(), request.durationSeconds());
+            isFailed = true;
+        }
+
         if (isFailed) {
             musicGeneration.updateStatus(GenerationStatus.FAILED, null);
         } else {
             musicGeneration.updateStatus(GenerationStatus.COMPLETED, audioUrl);
+            if (request.durationSeconds() != null) {
+                musicGeneration.updateDuration(request.durationSeconds());
+            }
         }
 
         SseEmitter emitter = emitters.remove(taskId);
@@ -379,12 +404,40 @@ public class MusicGenerationService {
                 .build();
 
         PutObjectPresignRequest presignRequest = PutObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofMinutes(10))
+                .signatureDuration(PRESIGNED_UPLOAD_EXPIRATION)
                 .putObjectRequest(putObjectRequest)
                 .build();
 
         PresignedPutObjectRequest presignedRequest = s3Presigner.presignPutObject(presignRequest);
         return presignedRequest.url().toString();
+    }
+
+    // 멜로디의 마지막 음이 끝나는 시점이 생성 길이를 (허용 오차 이상) 넘으면 거부한다.
+    private void validateMelodyLength(List<AiMelodyVector> melodyVectors) {
+        double melodyEnd = melodyVectors.stream()
+                .mapToDouble(vector -> vector.onsetSeconds() + vector.durationSeconds())
+                .max()
+                .orElse(0.0);
+
+        if (exceedsTolerance(melodyEnd - generationDurationSeconds)) {
+            throw new GeneralException(GeneralErrorCode.HUMMING_TOO_LONG);
+        }
+    }
+
+    // 최초 생성(generate) 작업만 요청한 길이와 AI가 보고한 길이를 비교한다.
+    // 보고된 길이가 없으면(구 AI 서버) 비교하지 않고 요청한 길이를 그대로 둔다.
+    private boolean isDurationMismatch(MusicGeneration musicGeneration, Double reportedDuration) {
+        if (reportedDuration == null
+                || musicGeneration.getParentGeneration() != null
+                || musicGeneration.getDurationSeconds() == null) {
+            return false;
+        }
+        return exceedsTolerance(Math.abs(reportedDuration - musicGeneration.getDurationSeconds()));
+    }
+
+    // 부동소수점 오차 때문에 경계값(예: 정확히 0.1초 차이)이 잘못 거부되지 않도록 아주 작은 보정값을 둔다.
+    private static boolean exceedsTolerance(double deviationSeconds) {
+        return deviationSeconds > DURATION_TOLERANCE_SECONDS + FLOAT_EPSILON;
     }
 
     private List<AiMelodyVector> parseMelodyVectors(String notesData) {

@@ -22,5 +22,9 @@ runpod:
   endpoint-url: ${RUNPOD_ENDPOINT_URL:https://api.runpod.ai/v2/pw8ukq72bavqde}
   api-key: ${RUNPOD_API_KEY:}
 
+generation:
+  # 생성할 곡 길이(초). AI 서버가 허용하는 상한은 30초이고, 허밍 최대 길이 검증에도 같은 값을 쓴다.
+  duration-seconds: 30
+
 backend:
   url: ${BACKEND_SERVER_URL:http://localhost:8080}

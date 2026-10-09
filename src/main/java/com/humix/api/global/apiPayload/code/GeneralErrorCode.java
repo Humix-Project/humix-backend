@@ -25,6 +25,7 @@ public enum GeneralErrorCode implements BaseErrorCode{
 
     // HUMMING 관련 에러
     HUMMING_NOT_FOUND(HttpStatus.NOT_FOUND, "HUMMING4000", "해당하는 허밍 기록이 존재하지 않습니다."),
+    HUMMING_TOO_LONG(HttpStatus.BAD_REQUEST, "HUMMING4001", "허밍은 최대 30초까지 가능합니다."),
 
     // MELODY 관련 에러
     MELODY_SCORE_NOT_FOUND(HttpStatus.NOT_FOUND, "MELODY4000", "해당 허밍의 멜로디 악보가 존재하지 않습니다."),
