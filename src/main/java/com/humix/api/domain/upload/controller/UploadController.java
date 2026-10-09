@@ -35,10 +35,4 @@ public class UploadController implements UploadControllerDocs {
 
         return ApiResponse.onSuccess(GeneralSuccessCode.OK, result);
     }
-
-    @PostMapping("/reference-tracks")
-    @Override
-    public ApiResponse<Object> saveReferenceTrackInfo(@RequestBody Object request) {
-        return ApiResponse.onSuccess(GeneralSuccessCode.OK, null);
-    }
 }

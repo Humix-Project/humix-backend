@@ -35,11 +35,4 @@ public interface UploadControllerDocs {
     @PostMapping("/humming")
     ApiResponse<HummingDTO.HummingSaveResponse> saveHummingInfo(@AuthenticationPrincipal CustomUserDetails userDetails,
                                                                 @RequestBody HummingDTO.HummingSaveRequest request);
-
-    @Operation(summary = "참조곡 오디오 메타데이터 저장 API", description = "S3 업로드 완료 후 사용자가 올린 참조곡의 메타데이터를 저장합니다.")
-    @ApiResponses({
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "성공")
-    })
-    @PostMapping("/reference-tracks")
-    ApiResponse<Object> saveReferenceTrackInfo(@RequestBody Object request);
 }
