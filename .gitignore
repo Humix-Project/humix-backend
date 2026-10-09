@@ -38,3 +38,17 @@ out/
 
 ### 환경 변수 파일 ###
 .env
+
+### 키 파일 ###
+*.pem
+
+### Python ###
+__pycache__/
+*.pyc
+venv/
+
+### macOS ###
+.DS_Store
+
+### Claude Code ###
+.claude/
