@@ -38,11 +38,11 @@ public class MeController implements MeControllerDocs {
         Page<MusicGeneration> songPage;
 
         if (genre != null && !genre.isBlank()) {
-            songPage = musicGenerationRepository.findByMemberAndGenreAndStatus(
+            songPage = musicGenerationRepository.findByMemberAndGenreAndStatusAndDeletedAtIsNull(
                     userDetails.getMember(), genre, GenerationStatus.COMPLETED, pageable
             );
         } else {
-            songPage = musicGenerationRepository.findByMemberAndStatus(
+            songPage = musicGenerationRepository.findByMemberAndStatusAndDeletedAtIsNull(
                     userDetails.getMember(), GenerationStatus.COMPLETED, pageable
             );
         }

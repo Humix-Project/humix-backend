@@ -194,7 +194,7 @@ public interface GenerationControllerDocs {
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
                             examples = @ExampleObject(name = "검증 실패",
                                     value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"prompt\":\"prompt는 필수입니다.\"}}"))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "원본 곡 없음",
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "수정 대상 곡 없음 (없는 ID 또는 버전 되돌리기로 삭제된 버전)",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
                             examples = @ExampleObject(name = "원본 곡 없음",
                                     value = "{\"isSuccess\":false, \"code\":\"GENERATION4000\", \"message\":\"해당하는 생성곡이 존재하지 않습니다.\", \"result\":null}")))
@@ -204,4 +204,117 @@ public interface GenerationControllerDocs {
             @AuthenticationPrincipal CustomUserDetails userDetails,
             @PathVariable("song_id") Long songId,
             @org.springframework.web.bind.annotation.RequestBody MusicGenerationDTO.SongModificationRequest request);
+
+    @Operation(
+            summary = "버전 되돌리기 API",
+            description = "지정한 버전으로 되돌립니다. 같은 곡(root)에서 해당 버전보다 **뒤에 만들어진 버전은 모두 삭제(soft delete)** 되어 " +
+                    "버전 목록과 내 곡 목록에서 사라집니다. (예: 버전 2로 되돌리면 3, 4 삭제)\n\n" +
+                    "- `generation_id` (path): 되돌릴 기준 버전의 ID. 완료(COMPLETED)된 본인 곡이어야 합니다.\n" +
+                    "- 같은 곡에 진행 중(PROCESSING)인 작업이 있으면 409를 반환합니다. 완료되거나 취소된 뒤 다시 시도하세요."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "되돌리기 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(
+                                    value = "{\n" +
+                                            "  \"isSuccess\": true,\n" +
+                                            "  \"code\": \"COMMON200\",\n" +
+                                            "  \"message\": \"성공입니다.\",\n" +
+                                            "  \"result\": {\n" +
+                                            "    \"generation_id\": 42,\n" +
+                                            "    \"deleted_count\": 2\n" +
+                                            "  }\n" +
+                                            "}"
+                            )
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "로그인 필요",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    value = "{\"isSuccess\": false, \"code\": \"AUTH4000\", \"message\": \"로그인이 필요한 기능입니다.\", \"result\": null}"
+                            )
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "되돌릴 수 있는 곡 없음 (없는 ID, 이미 삭제됨, 미완료, 타인의 곡)",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "곡 없음",
+                                    value = "{\"isSuccess\":false, \"code\":\"GENERATION4000\", \"message\":\"해당하는 생성곡이 존재하지 않습니다.\", \"result\":null}"))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "같은 곡에 진행 중인 작업이 있음",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "진행 중인 작업 있음",
+                                    value = "{\"isSuccess\":false, \"code\":\"GENERATION4001\", \"message\":\"같은 곡의 다른 버전을 생성 중입니다. 완료되거나 취소된 후 다시 시도해주세요.\", \"result\":null}")))
+    })
+    @PostMapping("/{generation_id}/revert")
+    ApiResponse<MusicGenerationDTO.RevertResponse> revertToVersion(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("generation_id") Long generationId);
+
+    @Operation(
+            summary = "버전 목록 조회 API",
+            description = "같은 곡의 유효한 버전(완료 + 삭제되지 않음)을 생성 순서(오래된 순)로 반환합니다.\n\n" +
+                    "- `root_generation_id` (path): 원본(최초 생성곡)의 ID. 수정본의 ID가 아니라 원본의 ID를 넘겨야 합니다.\n" +
+                    "- `version_no`: 목록 순서로 계산한 버전 번호 (1부터). 실패/취소된 작업은 번호를 차지하지 않습니다.\n" +
+                    "- 본인 곡만 조회할 수 있습니다."
+    )
+    @ApiResponses({
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "200",
+                    description = "조회 성공",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(
+                                    value = "{\n" +
+                                            "  \"isSuccess\": true,\n" +
+                                            "  \"code\": \"COMMON200\",\n" +
+                                            "  \"message\": \"성공입니다.\",\n" +
+                                            "  \"result\": {\n" +
+                                            "    \"root_generation_id\": 40,\n" +
+                                            "    \"versions\": [\n" +
+                                            "      {\n" +
+                                            "        \"generation_id\": 40,\n" +
+                                            "        \"version_no\": 1,\n" +
+                                            "        \"audio_url\": \"https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav\",\n" +
+                                            "        \"duration_seconds\": 30,\n" +
+                                            "        \"created_at\": \"2026-06-21T18:00:00\"\n" +
+                                            "      },\n" +
+                                            "      {\n" +
+                                            "        \"generation_id\": 42,\n" +
+                                            "        \"version_no\": 2,\n" +
+                                            "        \"audio_url\": \"https://humix-bucket.s3.amazonaws.com/audio/def456_variation.wav\",\n" +
+                                            "        \"duration_seconds\": 30,\n" +
+                                            "        \"created_at\": \"2026-06-21T18:05:00\"\n" +
+                                            "      }\n" +
+                                            "    ]\n" +
+                                            "  }\n" +
+                                            "}"
+                            )
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "로그인 필요",
+                    content = @Content(
+                            mediaType = "application/json",
+                            examples = @ExampleObject(
+                                    value = "{\"isSuccess\": false, \"code\": \"AUTH4000\", \"message\": \"로그인이 필요한 기능입니다.\", \"result\": null}"
+                            )
+                    )
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "곡 없음 (없는 ID, 삭제됨, 타인의 곡, 원본이 아닌 수정본의 ID)",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "곡 없음",
+                                    value = "{\"isSuccess\":false, \"code\":\"GENERATION4000\", \"message\":\"해당하는 생성곡이 존재하지 않습니다.\", \"result\":null}")))
+    })
+    @GetMapping("/{root_generation_id}/versions")
+    ApiResponse<MusicGenerationDTO.VersionListResponse> getVersions(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("root_generation_id") Long rootGenerationId);
 }

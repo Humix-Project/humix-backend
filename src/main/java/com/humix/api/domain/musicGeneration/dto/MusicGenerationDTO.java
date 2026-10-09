@@ -61,6 +61,52 @@ public class MusicGenerationDTO {
             String status
     ) {}
 
+    // 버전 되돌리기 응답 Response Body
+    public record RevertResponse(
+            @Schema(description = "되돌린 기준 버전의 ID (이 버전이 마지막 버전이 됨)", example = "2")
+            @JsonProperty("generation_id") Long generationId,
+
+            @Schema(description = "함께 삭제(soft delete)된 이후 버전 수", example = "2")
+            @JsonProperty("deleted_count") int deletedCount
+    ) {}
+
+    // 버전 목록의 개별 버전 정보
+    public record VersionItemResponse(
+            @Schema(description = "버전의 generation ID", example = "42")
+            @JsonProperty("generation_id") Long generationId,
+
+            @Schema(description = "버전 번호 (유효한 버전을 생성 순서로 센 값, 1부터)", example = "1")
+            @JsonProperty("version_no") int versionNo,
+
+            @Schema(description = "생성된 오디오 S3 URL", example = "https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav")
+            @JsonProperty("audio_url") String audioUrl,
+
+            @Schema(description = "생성된 오디오 재생 시간 (초)", example = "30")
+            @JsonProperty("duration_seconds") Double durationSeconds,
+
+            @Schema(description = "생성 일시", example = "2026-06-21T18:00:00")
+            @JsonProperty("created_at") LocalDateTime createdAt
+    ) {
+        public static VersionItemResponse of(MusicGeneration musicGeneration, int versionNo) {
+            return new VersionItemResponse(
+                    musicGeneration.getId(),
+                    versionNo,
+                    musicGeneration.getResultS3Url(),
+                    musicGeneration.getDurationSeconds(),
+                    musicGeneration.getCreatedAt()
+            );
+        }
+    }
+
+    // 버전 목록 조회 Response Body
+    public record VersionListResponse(
+            @Schema(description = "버전 묶음의 기준(원본) generation ID", example = "40")
+            @JsonProperty("root_generation_id") Long rootGenerationId,
+
+            @Schema(description = "유효한 버전 목록 (생성 순서)")
+            List<VersionItemResponse> versions
+    ) {}
+
     // 생성곡 프롬프트 수정 요청 Request Body
     public record SongModificationRequest(
             @Schema(description = "수정 방향 프롬프트 (예: 더 밝게, 템포를 빠르게 등)", example = "더 밝고 경쾌하게 수정해줘",

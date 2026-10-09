@@ -55,4 +55,26 @@ public class GenerationController implements GenerationControllerDocs {
         MusicGenerationDTO.TaskAcceptedResponse result = musicGenerationService.modifySongPrompt(userDetails, songId, request);
         return ApiResponse.onSuccess(GeneralSuccessCode.ACCEPTED, result);
     }
+
+    // 특정 버전으로 되돌리기 (이후 버전 soft delete)
+    @PostMapping("/{generation_id}/revert")
+    @Override
+    public ApiResponse<MusicGenerationDTO.RevertResponse> revertToVersion(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("generation_id") Long generationId) {
+
+        MusicGenerationDTO.RevertResponse result = musicGenerationService.revertToVersion(userDetails, generationId);
+        return ApiResponse.onSuccess(GeneralSuccessCode.OK, result);
+    }
+
+    // 원본(root) 곡의 유효한 버전 목록 조회
+    @GetMapping("/{root_generation_id}/versions")
+    @Override
+    public ApiResponse<MusicGenerationDTO.VersionListResponse> getVersions(
+            @AuthenticationPrincipal CustomUserDetails userDetails,
+            @PathVariable("root_generation_id") Long rootGenerationId) {
+
+        MusicGenerationDTO.VersionListResponse result = musicGenerationService.getVersions(userDetails, rootGenerationId);
+        return ApiResponse.onSuccess(GeneralSuccessCode.OK, result);
+    }
 }
