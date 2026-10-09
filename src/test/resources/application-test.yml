@@ -1,0 +1,31 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:humix;MODE=MariaDB;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+
+jwt:
+  token:
+    secret-key: test-secret-key-for-h2-context-load-only-0123456789abcdef
+    expiration:
+      access: 1800000
+      refresh: 604800000
+  cookie:
+    secure: false
+    same-site: Lax
+
+cloud:
+  aws:
+    credentials:
+      access-key: test
+      secret-key: test
+    s3:
+      bucket: test-bucket
+    region:
+      static: ap-northeast-2
+    stack:
+      auto: false
