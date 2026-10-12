@@ -190,6 +190,24 @@ class SongSectionModificationTest {
         assertThat(v3.getRootGenerationId()).isEqualTo(source.getId());
     }
 
+    @Test
+    void 재생성을_반복해도_곡_이름은_부모_이름_그대로라_30자_한도를_넘지_않는다() throws Exception {
+        // 기본 제목 "나의 허밍곡"에 " (수정본)"이 계속 붙으면 5번째 재생성에서 name(30자) 한도를 넘어 500이 났다 (#44)
+        MusicGeneration current = musicGenerationRepository.save(MusicGeneration.builder()
+                .member(member).melodyScore(melody).name("나의 허밍곡").genre("pop").atmosphere("happy")
+                .durationSeconds(30.0).build());
+        current.markAsRoot();
+        current.updateStatus(GenerationStatus.COMPLETED, "https://example.com/name-0.wav");
+        current = musicGenerationRepository.save(current);
+
+        for (int i = 1; i <= 6; i++) {
+            String taskId = startModification(current, null, 0, 10);
+            complete(taskId, "https://example.com/name-" + i + ".wav", 30.0).andExpect(status().isOk());
+            current = musicGenerationRepository.findByTaskId(taskId).orElseThrow();
+            assertThat(current.getName()).isEqualTo("나의 허밍곡");
+        }
+    }
+
     // ---------- 구간 검증 ----------
 
     @ParameterizedTest(name = "{0}~{1}초는 허용")
