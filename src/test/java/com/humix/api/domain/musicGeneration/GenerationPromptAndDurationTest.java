@@ -136,7 +136,7 @@ class GenerationPromptAndDurationTest {
                         + "{\"start_time_seconds\":29.6,\"pitch\":62,\"duration_seconds\":0.5}]");
 
         postJson("/api/v1/generation/songs", generateBody(hummingId, null))
-                .andExpect(status().isOk())
+                .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.code").value("COMMON202"));
     }
 
@@ -278,7 +278,7 @@ class GenerationPromptAndDurationTest {
 
     private String startGeneration(Long hummingId, String prompt) throws Exception {
         String body = postJson("/api/v1/generation/songs", generateBody(hummingId, prompt))
-                .andExpect(status().isOk())
+                .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.code").value("COMMON202"))
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(body).at("/result/task_id").asText();

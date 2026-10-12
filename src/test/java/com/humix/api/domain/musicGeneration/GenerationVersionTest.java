@@ -297,6 +297,7 @@ class GenerationVersionTest {
                         .header("Authorization", bearer)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"humming_id\":" + humming.getId() + ",\"title\":\"t\",\"genre\":\"pop\",\"mood\":\"happy\"}"))
+                .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.code").value("COMMON202"))
                 .andReturn().getResponse().getContentAsString();
         MusicGeneration root = musicGenerationRepository
@@ -310,6 +311,7 @@ class GenerationVersionTest {
                         .header("Authorization", bearer)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"prompt\":\"더 밝게\",\"start_time_sec\":10,\"end_time_sec\":20}"))
+                .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.code").value("COMMON202"))
                 .andReturn().getResponse().getContentAsString();
         MusicGeneration child = musicGenerationRepository
