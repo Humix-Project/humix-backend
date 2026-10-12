@@ -143,7 +143,7 @@ public class MusicGenerationDTO {
                     .member(member)
                     .melodyScore(melodyScore)
                     .parentGeneration(parentGeneration)
-                    .name(parentGeneration.getName() + " (수정본)")
+                    .name(parentGeneration.getName()) // 같은 곡의 모든 버전이 이름을 공유 (30자 컬럼이라 덧붙이면 반복 시 넘침)
                     .genre(parentGeneration.getGenre())
                     .atmosphere(parentGeneration.getAtmosphere())
                     .prompt(hasPrompt() ? prompt : parentGeneration.getPrompt())
