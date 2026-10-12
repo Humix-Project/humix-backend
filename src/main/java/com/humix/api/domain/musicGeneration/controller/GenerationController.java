@@ -7,6 +7,7 @@ import com.humix.api.global.apiPayload.code.GeneralSuccessCode;
 import com.humix.api.global.security.userdetails.CustomUserDetails;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -20,6 +21,7 @@ public class GenerationController implements GenerationControllerDocs {
 
     // ⑧ 노래 생성 요청 (비동기)
     @PostMapping("")
+    @ResponseStatus(HttpStatus.ACCEPTED)
     @Override
     public ApiResponse<MusicGenerationDTO.TaskAcceptedResponse> generateSong(
             @AuthenticationPrincipal CustomUserDetails userDetails,
@@ -46,6 +48,7 @@ public class GenerationController implements GenerationControllerDocs {
 
     // ⑪ 생성곡 구간 재생성 요청
     @PostMapping("/{generation_id}/modifications")
+    @ResponseStatus(HttpStatus.ACCEPTED)
     @Override
     public ApiResponse<MusicGenerationDTO.TaskAcceptedResponse> modifySongSection(
             @AuthenticationPrincipal CustomUserDetails userDetails,

@@ -198,7 +198,7 @@ class SongSectionModificationTest {
         MusicGeneration target = completed(member, null, "https://example.com/" + UUID.randomUUID() + ".wav", 30.0, null);
 
         modify(target.getId(), null, start, end)
-                .andExpect(status().isOk())
+                .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.code").value("COMMON202"));
     }
 
@@ -218,7 +218,7 @@ class SongSectionModificationTest {
         MusicGeneration slightlyShort = completed(member, null, "https://example.com/a.wav", 29.95, null);
         MusicGeneration tooShort = completed(member, null, "https://example.com/b.wav", 29.8, null);
 
-        modify(slightlyShort.getId(), null, 0, 30).andExpect(status().isOk());
+        modify(slightlyShort.getId(), null, 0, 30).andExpect(status().isAccepted());
         modify(tooShort.getId(), null, 0, 30)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("GENERATION4002"));
@@ -231,7 +231,7 @@ class SongSectionModificationTest {
         modify(shorter.getId(), null, 10, 25)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("GENERATION4002"));
-        modify(shorter.getId(), null, 10, 20).andExpect(status().isOk());
+        modify(shorter.getId(), null, 10, 20).andExpect(status().isAccepted());
     }
 
     @Test
@@ -249,7 +249,7 @@ class SongSectionModificationTest {
                 .andExpect(jsonPath("$.code").value("COMMON400"))
                 .andExpect(jsonPath("$.result.prompt").exists());
 
-        modify(source.getId(), "가".repeat(500), 0, 10).andExpect(status().isOk());
+        modify(source.getId(), "가".repeat(500), 0, 10).andExpect(status().isAccepted());
     }
 
     // ---------- 동시 작업 차단 ----------
@@ -272,7 +272,7 @@ class SongSectionModificationTest {
         String first = startModification(source, null, 0, 10);
         complete(first, "https://example.com/v2.wav", 30.0).andExpect(status().isOk());
 
-        modify(source.getId(), null, 10, 20).andExpect(status().isOk());
+        modify(source.getId(), null, 10, 20).andExpect(status().isAccepted());
     }
 
     @Test
@@ -280,7 +280,7 @@ class SongSectionModificationTest {
         MusicGeneration other = completed(member, null, "https://example.com/other.wav", 30.0, null);
         startModification(other, null, 0, 10);
 
-        modify(source.getId(), null, 0, 10).andExpect(status().isOk());
+        modify(source.getId(), null, 0, 10).andExpect(status().isAccepted());
     }
 
     // ---------- 대상 버전 검증 ----------
@@ -405,7 +405,7 @@ class SongSectionModificationTest {
         assertThat(statusOf(taskId)).isEqualTo(GenerationStatus.FAILED);
         versions(source.getId()).andExpect(jsonPath("$.result.versions.length()").value(1));
         // 실패하면 같은 곡에 다시 요청할 수 있다
-        modify(source.getId(), null, 10, 20).andExpect(status().isOk());
+        modify(source.getId(), null, 10, 20).andExpect(status().isAccepted());
     }
 
     // ---------- helpers ----------
@@ -438,7 +438,7 @@ class SongSectionModificationTest {
 
     private String startModification(MusicGeneration target, String prompt, int start, int end) throws Exception {
         String body = modify(target.getId(), prompt, start, end)
-                .andExpect(status().isOk())
+                .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.code").value("COMMON202"))
                 .andReturn().getResponse().getContentAsString();
         return objectMapper.readTree(body).at("/result/task_id").asText();
