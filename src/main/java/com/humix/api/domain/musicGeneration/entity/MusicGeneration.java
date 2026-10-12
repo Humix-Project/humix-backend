@@ -63,6 +63,13 @@ public class MusicGeneration {
     @Column(name = "duration_seconds")
     private Double durationSeconds;
 
+    // 구간 재생성 시 다시 만든 구간 (부모 버전 기준 초). 최초 생성곡은 NULL
+    @Column(name = "start_time_sec")
+    private Integer startTimeSec;
+
+    @Column(name = "end_time_sec")
+    private Integer endTimeSec;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     private GenerationStatus status;
@@ -78,7 +85,7 @@ public class MusicGeneration {
     @Builder
     public MusicGeneration(Member member, MelodyScore melodyScore, MusicGeneration parentGeneration,
                            String name, String genre, String atmosphere, String prompt, String taskId,
-                           Double durationSeconds) {
+                           Double durationSeconds, Integer startTimeSec, Integer endTimeSec) {
         this.member = member;
         this.melodyScore = melodyScore;
         this.parentGeneration = parentGeneration;
@@ -89,6 +96,8 @@ public class MusicGeneration {
         this.prompt = prompt;
         this.taskId = taskId;
         this.durationSeconds = durationSeconds;
+        this.startTimeSec = startTimeSec;
+        this.endTimeSec = endTimeSec;
         this.status = GenerationStatus.PROCESSING; // 초기 상태 설정
     }
 

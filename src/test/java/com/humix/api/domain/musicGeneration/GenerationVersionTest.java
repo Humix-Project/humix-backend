@@ -284,7 +284,7 @@ class GenerationVersionTest {
         mockMvc.perform(post("/api/v1/generation/songs/{id}/modifications", v2.getId())
                         .header("Authorization", bearer)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"prompt\":\"더 밝게\"}"))
+                        .content("{\"prompt\":\"더 밝게\",\"start_time_sec\":0,\"end_time_sec\":10}"))
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GENERATION4000"));
     }
@@ -309,7 +309,7 @@ class GenerationVersionTest {
         String modifyBody = mockMvc.perform(post("/api/v1/generation/songs/{id}/modifications", root.getId())
                         .header("Authorization", bearer)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"prompt\":\"더 밝게\"}"))
+                        .content("{\"prompt\":\"더 밝게\",\"start_time_sec\":10,\"end_time_sec\":20}"))
                 .andExpect(jsonPath("$.code").value("COMMON202"))
                 .andReturn().getResponse().getContentAsString();
         MusicGeneration child = musicGenerationRepository

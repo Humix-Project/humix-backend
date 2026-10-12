@@ -143,10 +143,15 @@ public interface GenerationControllerDocs {
     ApiResponse<MusicGenerationDTO.TaskCancelResponse> cancelTask(@PathVariable("task_id") String taskId);
 
     @Operation(
-            summary = "생성곡 프롬프트 수정 요청 API",
-            description = "기존 완성곡을 바탕으로 프롬프트를 주입하여 새로운 버전으로 수정을 비동기 요청합니다. (202 Accepted 반환)\n\n" +
-                    "- `song_id` (path): 수정 대상 원본 완성곡의 ID\n" +
-                    "- `prompt`: 수정 방향 자연어 설명 (예: '더 밝고 경쾌하게', '템포를 느리게')"
+            summary = "생성곡 구간 재생성 요청 API (비동기)",
+            description = "선택한 구간만 다시 생성한 **새 버전**을 비동기로 요청합니다. (202 Accepted 반환)\n\n" +
+                    "원곡(수정 대상 버전)은 그대로 유지되고 새 `generation_id`가 부여됩니다. 구간 자르기·문맥 선택·크로스페이드·병합은 AI 서버가 처리하며, " +
+                    "완료되면 구간 밖 부분은 원곡을 유지한 **전체 곡**이 결과로 저장됩니다. 구간 끝 이후 약 1초는 크로스페이드로 원곡 소리가 일부 바뀔 수 있습니다.\n\n" +
+                    "- `generation_id` (path): 수정 대상 버전의 ID (원본 또는 이전 수정본). 완료(COMPLETED)된 본인 곡이어야 합니다.\n" +
+                    "- `prompt`: 재생성 구간에 적용할 스타일 프롬프트 (선택, 최대 500자). 생략하면 수정 대상 버전의 프롬프트를 그대로 사용합니다.\n" +
+                    "- `start_time_sec`, `end_time_sec`: 재생성할 구간 (초, 수정 대상 버전 기준). `0 ≤ start`, `end - start ≥ 5`, `end ≤ 곡 길이`이며 곡 전체도 재생성할 수 있습니다.\n\n" +
+                    "진행 상황은 응답의 `task_id`로 SSE(`/tasks/{task_id}/stream`)를 구독해 받습니다. " +
+                    "AI 서버가 실패하거나 결과 길이가 원곡과 0.1초 넘게 다르면 새 버전은 만들어지지 않고(`FAILED`) 원곡이 유지됩니다."
     )
     @RequestBody(
             required = true,
@@ -154,9 +159,11 @@ public interface GenerationControllerDocs {
                     mediaType = "application/json",
                     schema = @Schema(implementation = MusicGenerationDTO.SongModificationRequest.class),
                     examples = @ExampleObject(
-                            name = "수정 요청 예시",
+                            name = "구간 재생성 요청 예시",
                             value = "{\n" +
-                                    "  \"prompt\": \"더 밝고 경쾌하게 수정해줘\"\n" +
+                                    "  \"prompt\": \"더 밝고 경쾌하게\",\n" +
+                                    "  \"start_time_sec\": 10,\n" +
+                                    "  \"end_time_sec\": 20\n" +
                                     "}"
                     )
             )
@@ -190,19 +197,27 @@ public interface GenerationControllerDocs {
                             )
                     )
             ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패",
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "요청 값 검증 실패 또는 잘못된 구간",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
-                            examples = @ExampleObject(name = "검증 실패",
-                                    value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"prompt\":\"prompt는 필수입니다.\"}}"))),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "수정 대상 곡 없음 (없는 ID 또는 버전 되돌리기로 삭제된 버전)",
+                            examples = {
+                                    @ExampleObject(name = "검증 실패",
+                                            value = "{\"isSuccess\":false, \"code\":\"COMMON400\", \"message\":\"잘못된 요청입니다.\", \"result\":{\"start_time_sec\":\"start_time_sec는 필수입니다.\"}}"),
+                                    @ExampleObject(name = "잘못된 구간",
+                                            value = "{\"isSuccess\":false, \"code\":\"GENERATION4002\", \"message\":\"재생성 구간이 올바르지 않습니다. 시작은 0초 이상, 구간 길이는 5초 이상이어야 하며 끝은 곡 길이를 넘을 수 없습니다.\", \"result\":null}")
+                            })),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "수정 대상 곡 없음 (없는 ID, 삭제된 버전, 미완료 버전, 타인의 곡)",
                     content = @Content(schema = @Schema(implementation = ApiResponse.class),
                             examples = @ExampleObject(name = "원본 곡 없음",
-                                    value = "{\"isSuccess\":false, \"code\":\"GENERATION4000\", \"message\":\"해당하는 생성곡이 존재하지 않습니다.\", \"result\":null}")))
+                                    value = "{\"isSuccess\":false, \"code\":\"GENERATION4000\", \"message\":\"해당하는 생성곡이 존재하지 않습니다.\", \"result\":null}"))),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "같은 곡에 진행 중인 작업이 있음",
+                    content = @Content(schema = @Schema(implementation = ApiResponse.class),
+                            examples = @ExampleObject(name = "진행 중인 작업 있음",
+                                    value = "{\"isSuccess\":false, \"code\":\"GENERATION4001\", \"message\":\"같은 곡의 다른 버전을 생성 중입니다. 완료되거나 취소된 후 다시 시도해주세요.\", \"result\":null}")))
     })
-    @PostMapping("/{song_id}/modifications")
-    ApiResponse<MusicGenerationDTO.TaskAcceptedResponse> modifySongPrompt(
+    @PostMapping("/{generation_id}/modifications")
+    ApiResponse<MusicGenerationDTO.TaskAcceptedResponse> modifySongSection(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable("song_id") Long songId,
+            @PathVariable("generation_id") Long generationId,
             @org.springframework.web.bind.annotation.RequestBody MusicGenerationDTO.SongModificationRequest request);
 
     @Operation(
@@ -261,6 +276,7 @@ public interface GenerationControllerDocs {
             description = "같은 곡의 유효한 버전(완료 + 삭제되지 않음)을 생성 순서(오래된 순)로 반환합니다.\n\n" +
                     "- `root_generation_id` (path): 원본(최초 생성곡)의 ID. 수정본의 ID가 아니라 원본의 ID를 넘겨야 합니다.\n" +
                     "- `version_no`: 목록 순서로 계산한 버전 번호 (1부터). 실패/취소된 작업은 번호를 차지하지 않습니다.\n" +
+                    "- `start_time_sec`, `end_time_sec`: 해당 버전에서 다시 만든 구간(직전 버전 기준). 원본(최초 생성곡)은 null\n" +
                     "- 본인 곡만 조회할 수 있습니다."
     )
     @ApiResponses({
@@ -281,15 +297,21 @@ public interface GenerationControllerDocs {
                                             "      {\n" +
                                             "        \"generation_id\": 40,\n" +
                                             "        \"version_no\": 1,\n" +
+                                            "        \"prompt\": null,\n" +
+                                            "        \"start_time_sec\": null,\n" +
+                                            "        \"end_time_sec\": null,\n" +
                                             "        \"audio_url\": \"https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav\",\n" +
-                                            "        \"duration_seconds\": 30,\n" +
+                                            "        \"duration_seconds\": 30.0,\n" +
                                             "        \"created_at\": \"2026-06-21T18:00:00\"\n" +
                                             "      },\n" +
                                             "      {\n" +
                                             "        \"generation_id\": 42,\n" +
                                             "        \"version_no\": 2,\n" +
+                                            "        \"prompt\": \"더 밝고 경쾌하게\",\n" +
+                                            "        \"start_time_sec\": 10,\n" +
+                                            "        \"end_time_sec\": 20,\n" +
                                             "        \"audio_url\": \"https://humix-bucket.s3.amazonaws.com/audio/def456_variation.wav\",\n" +
-                                            "        \"duration_seconds\": 30,\n" +
+                                            "        \"duration_seconds\": 30.0,\n" +
                                             "        \"created_at\": \"2026-06-21T18:05:00\"\n" +
                                             "      }\n" +
                                             "    ]\n" +

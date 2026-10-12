@@ -48,6 +48,9 @@ public class MusicGenerationService {
     private static final double DURATION_TOLERANCE_SECONDS = 0.1;
     private static final double FLOAT_EPSILON = 1e-9;
 
+    // 구간 재생성에서 허용하는 최소 구간 길이(초). 최대는 원곡 길이(전체 재생성 가능)
+    private static final int MIN_SECTION_SECONDS = 5;
+
     private final MusicGenerationRepository musicGenerationRepository;
     private final MelodyScoreRepository melodyScoreRepository;
     private final S3Presigner s3Presigner;
@@ -93,11 +96,17 @@ public class MusicGenerationService {
             @JsonProperty("presigned_url") String presignedUrl
     ) {}
 
+    // 구간 재생성(modify) 요청. 구간 자르기·문맥 선택·크로스페이드·병합은 AI 서버가 맡고, duration_seconds는 보내지 않는다.
     private record AiModificationRequest(
             String action,
             @JsonProperty("task_id") String taskId,
             @JsonProperty("melody_vectors") List<AiMelodyVector> melodyVectors,
-            String prompt,
+            String genre,
+            String mood,
+            @JsonInclude(JsonInclude.Include.NON_NULL) String prompt,
+            @JsonProperty("source_audio_url") String sourceAudioUrl,
+            @JsonProperty("section_start_seconds") int sectionStartSeconds,
+            @JsonProperty("section_end_seconds") int sectionEndSeconds,
             @JsonProperty("callback_url") String callbackUrl,
             @JsonProperty("presigned_url") String presignedUrl
     ) {}
@@ -170,47 +179,66 @@ public class MusicGenerationService {
         return new MusicGenerationDTO.TaskAcceptedResponse(taskId);
     }
 
+    /**
+     * 선택한 구간만 다시 생성한 새 버전을 만든다. 원곡(수정 대상 버전)은 그대로 두고 새 generation_id를 부여한다.
+     * 오디오 처리는 AI 서버가 전담하며, 백엔드는 구간 정보와 원곡 URL을 넘기고 완료 콜백에서 결과 길이를 검증한다.
+     */
     @Transactional
-    public MusicGenerationDTO.TaskAcceptedResponse modifySongPrompt(CustomUserDetails userDetails,
-                                                                    Long songId,
-                                                                    MusicGenerationDTO.SongModificationRequest request) {
-        if (userDetails == null || userDetails.getMember() == null) {
-            throw new GeneralException(GeneralErrorCode.LOGIN_REQUIRED);
-        }
+    public MusicGenerationDTO.TaskAcceptedResponse modifySongSection(CustomUserDetails userDetails,
+                                                                     Long generationId,
+                                                                     MusicGenerationDTO.SongModificationRequest request) {
+        requireLogin(userDetails);
 
-        // 1. 기존 완성곡(Parent) 로드
-        MusicGeneration parentGeneration = musicGenerationRepository.findByIdAndDeletedAtIsNull(songId)
+        // 1. 수정 대상 버전(Parent) 로드: 완료된 본인 곡이며 삭제되지 않았고 결과 오디오가 있어야 한다
+        MusicGeneration parentGeneration = musicGenerationRepository
+                .findByIdAndStatusAndDeletedAtIsNull(generationId, GenerationStatus.COMPLETED)
+                .filter(generation -> isOwner(userDetails, generation))
+                .filter(this::hasResultAudio)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.GENERATION_NOT_FOUND));
+
+        // 2. 구간 검증 및 같은 곡의 진행 중인 작업 차단
+        validateSection(request.startTimeSec(), request.endTimeSec(), parentGeneration.getDurationSeconds());
+        if (musicGenerationRepository.existsByRootGenerationIdAndStatusAndDeletedAtIsNull(
+                parentGeneration.getRootGenerationId(), GenerationStatus.PROCESSING)) {
+            throw new GeneralException(GeneralErrorCode.GENERATION_IN_PROGRESS);
+        }
 
         MelodyScore melodyScore = parentGeneration.getMelodyScore();
 
-        // 2. Task ID 생성
+        // 3. Task ID 생성
         String taskId = "task_" + UUID.randomUUID().toString();
 
-        // 3. S3 Presigned URL 생성
+        // 4. S3 Presigned URL 생성 (원곡 키를 덮어쓰지 않도록 요청마다 새 키)
         String uniqueFileName = UUID.randomUUID().toString() + "_variation.wav";
         String fileKey = "audio/" + uniqueFileName;
         String presignedUrl = generatePresignedUrl(fileKey);
 
-        // 4. 새로운 MusicGeneration 엔티티 생성 및 영속화
+        // 5. 새로운 MusicGeneration 엔티티 생성 및 영속화
         MusicGeneration musicGeneration = request.from(userDetails.getMember(), melodyScore, parentGeneration);
         musicGeneration.updateTaskId(taskId);
-        musicGeneration.updateDuration((double) generationDurationSeconds); // 완료 콜백에서 AI가 보고한 실제 길이로 갱신
+        // 병합된 전체 곡이므로 결과 길이는 원곡과 같아야 한다. 완료 콜백에서 이 값과 비교한 뒤 AI가 보고한 실제 길이로 갱신
+        musicGeneration.updateDuration(parentGeneration.getDurationSeconds());
         musicGenerationRepository.save(musicGeneration);
 
-        // 5. Melody Vectors 파싱
+        // 6. Melody Vectors 파싱 (곡 전체 분량, 원곡 기준 시점 그대로)
         List<AiMelodyVector> melodyVectors = parseMelodyVectors(melodyScore.getNotesData());
 
-        // 6. AI 서버로 비동기 수정 요청
+        // 7. AI 서버로 비동기 구간 재생성 요청
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
 
-        log.info("[MusicGeneration] Requesting prompt modification for taskId: {}, prompt: {}, callback: {}", taskId, request.prompt(), callbackUrl);
+        log.info("[MusicGeneration] Requesting section modification for taskId: {}, sourceGenerationId: {}, section: {}~{}s, prompt: {}, callback: {}",
+                taskId, parentGeneration.getId(), request.startTimeSec(), request.endTimeSec(), musicGeneration.getPrompt(), callbackUrl);
 
         AiModificationRequest aiRequest = new AiModificationRequest(
                 "modify",
                 taskId,
                 melodyVectors,
-                request.prompt(),
+                musicGeneration.getGenre(),
+                musicGeneration.getAtmosphere(),
+                musicGeneration.getPrompt(),
+                parentGeneration.getResultS3Url(),
+                request.startTimeSec(),
+                request.endTimeSec(),
                 callbackUrl,
                 presignedUrl
         );
@@ -227,7 +255,7 @@ public class MusicGenerationService {
                     .toBodilessEntity()
                     .block();
         } catch (Exception e) {
-            throw new IllegalStateException("AI 서버로 노래 수정 요청을 전송하는데 실패했습니다.", e);
+            throw new IllegalStateException("AI 서버로 구간 재생성 요청을 전송하는데 실패했습니다.", e);
         }
 
         return new MusicGenerationDTO.TaskAcceptedResponse(taskId);
@@ -484,12 +512,25 @@ public class MusicGenerationService {
         }
     }
 
-    // 최초 생성(generate) 작업만 요청한 길이와 AI가 보고한 길이를 비교한다.
-    // 보고된 길이가 없으면(구 AI 서버) 비교하지 않고 요청한 길이를 그대로 둔다.
+    // 구간 재생성의 소스 오디오는 결과 URL과 길이가 모두 있어야 한다.
+    private boolean hasResultAudio(MusicGeneration generation) {
+        return generation.getResultS3Url() != null && !generation.getResultS3Url().isBlank()
+                && generation.getDurationSeconds() != null;
+    }
+
+    // 0 ≤ start, 구간 길이 ≥ 5초, end ≤ 원곡 길이 (원곡 길이는 0.1초 오차 허용: 29.95초짜리 곡의 끝 30초도 전체 재생성으로 본다)
+    private void validateSection(int startTimeSec, int endTimeSec, double sourceDurationSeconds) {
+        if (startTimeSec < 0
+                || endTimeSec - startTimeSec < MIN_SECTION_SECONDS
+                || exceedsTolerance(endTimeSec - sourceDurationSeconds)) {
+            throw new GeneralException(GeneralErrorCode.INVALID_SECTION_RANGE);
+        }
+    }
+
+    // 요청한 길이(최초 생성은 설정값, 구간 재생성은 원곡 길이)와 AI가 보고한 길이를 비교한다.
+    // 보고된 길이가 없으면(구 AI 서버) 비교하지 않고 요청 시 기록한 길이를 그대로 둔다.
     private boolean isDurationMismatch(MusicGeneration musicGeneration, Double reportedDuration) {
-        if (reportedDuration == null
-                || musicGeneration.getParentGeneration() != null
-                || musicGeneration.getDurationSeconds() == null) {
+        if (reportedDuration == null || musicGeneration.getDurationSeconds() == null) {
             return false;
         }
         return exceedsTolerance(Math.abs(reportedDuration - musicGeneration.getDurationSeconds()));
