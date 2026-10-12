@@ -337,6 +337,7 @@ public class MusicGenerationService {
                 MusicGenerationDTO.CompletionResult result = new MusicGenerationDTO.CompletionResult(
                         taskId,
                         musicGeneration.getId(),
+                        musicGeneration.getRootGenerationId(),
                         musicGeneration.getResultS3Url(),
                         musicGeneration.getDurationSeconds()
                 );
@@ -465,6 +466,7 @@ public class MusicGenerationService {
                     MusicGenerationDTO.CompletionResult result = new MusicGenerationDTO.CompletionResult(
                             taskId,
                             musicGeneration.getId(),
+                            musicGeneration.getRootGenerationId(),
                             audioUrl,
                             musicGeneration.getDurationSeconds()
                     );

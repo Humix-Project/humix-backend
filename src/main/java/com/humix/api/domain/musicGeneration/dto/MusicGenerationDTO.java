@@ -177,6 +177,10 @@ public class MusicGenerationDTO {
             @Schema(description = "생성된 곡 ID", example = "42")
             @JsonProperty("song_id") Long songId,
 
+            @Schema(description = "같은 곡의 버전 묶음 기준(원본) ID. 최초 생성곡이면 song_id와 같고, 재생성본은 원본의 ID. 버전 목록·되돌리기 API에 사용. 백필 전 기존 곡은 null",
+                    example = "40", nullable = true)
+            @JsonProperty("root_generation_id") Long rootGenerationId,
+
             @Schema(description = "생성된 오디오 S3 URL", example = "https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav")
             @JsonProperty("audio_url") String audioUrl,
 

@@ -95,10 +95,12 @@ public interface GenerationControllerDocs {
             description = "Task ID를 통해 비동기 작업 진행률과 완료 결과를 Server-Sent Events(SSE) 스트림으로 받습니다.\n\n" +
                     "**이벤트 종류:**\n" +
                     "- `connect`: 최초 연결 성공 시 전송\n" +
-                    "- `progress`: 진행률 업데이트 (status: PROCESSING, progress: 0~90)\n" +
-                    "- `complete`: 작업 완료 시 전송 (status: COMPLETED / FAILED)\n\n" +
+                    "- `progress`: 진행률 업데이트 및 실패·취소 통보 (status: PROCESSING / FAILED / CANCELED, progress: 0~90)\n" +
+                    "- `complete`: 작업이 **성공적으로 완료**됐을 때만 전송 (status: COMPLETED). 실패·취소는 `progress` 이벤트로 옵니다.\n\n" +
                     "**progress 이벤트 예시:** `{\"task_id\": \"task_xxx\", \"status\": \"PROCESSING\", \"progress\": 50}`\n\n" +
-                    "**complete 이벤트 예시:** `{\"status\": \"COMPLETED\", \"result\": {\"task_id\": \"task_xxx\", \"song_id\": 42, \"audio_url\": \"https://...\", \"duration_seconds\": 30.0}}`"
+                    "**complete 이벤트 예시:** `{\"status\": \"COMPLETED\", \"result\": {\"task_id\": \"task_xxx\", \"song_id\": 42, \"root_generation_id\": 40, \"audio_url\": \"https://...\", \"duration_seconds\": 30.0}}`\n\n" +
+                    "`root_generation_id`는 같은 곡의 버전 묶음 기준(원본) ID입니다. 최초 생성곡은 `song_id`와 같고, 재생성본은 원본의 ID입니다. " +
+                    "버전 목록(`/{root_generation_id}/versions`)과 되돌리기에 쓰며, 새로고침 후에도 `task_id`로 다시 구독하면 얻을 수 있습니다."
     )
     @ApiResponses({
             @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "스트림 연결 성공"),
