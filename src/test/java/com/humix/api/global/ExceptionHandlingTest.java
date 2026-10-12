@@ -101,16 +101,18 @@ class ExceptionHandlingTest {
 
     @Test
     void 곡수정_없는_곡이면_404() throws Exception {
-        postJson("/api/v1/generation/songs/999/modifications", "{\"prompt\":\"더 밝게\"}")
+        postJson("/api/v1/generation/songs/999/modifications",
+                "{\"prompt\":\"더 밝게\",\"start_time_sec\":0,\"end_time_sec\":10}")
                 .andExpect(status().isNotFound())
                 .andExpect(jsonPath("$.code").value("GENERATION4000"));
     }
 
     @Test
-    void 곡수정_prompt_누락이면_400() throws Exception {
+    void 곡수정_구간_누락이면_400() throws Exception {
         postJson("/api/v1/generation/songs/999/modifications", "{}")
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.result.prompt").exists());
+                .andExpect(jsonPath("$.result.start_time_sec").exists())
+                .andExpect(jsonPath("$.result.end_time_sec").exists());
     }
 
     @Test

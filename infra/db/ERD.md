@@ -44,6 +44,8 @@ erDiagram
         varchar(512) result_s3_url "nullable"
         varchar(100) task_id UK "nullable"
         double duration_seconds "nullable"
+        int start_time_sec "nullable, 구간 재생성 시작"
+        int end_time_sec "nullable, 구간 재생성 끝"
         varchar(20) status
         datetime created_at
         datetime deleted_at "nullable"
@@ -82,7 +84,7 @@ erDiagram
 | updated_at | 마지막 수정 시각 |
 
 ### music_generation
-AI 음악 생성 결과. 수정(재생성)하면 원본을 바꾸지 않고 `parent_generation_id`가 원본을 가리키는 새 행이 추가됩니다.
+AI 음악 생성 결과. 구간 재생성하면 원본을 바꾸지 않고 `parent_generation_id`가 수정 대상 버전을 가리키는 새 행이 추가됩니다. 새 행의 결과는 구간 밖은 부모를 유지한 전체 곡입니다.
 
 | 컬럼 | 설명 |
 |---|---|
@@ -97,7 +99,9 @@ AI 음악 생성 결과. 수정(재생성)하면 원본을 바꾸지 않고 `par
 | prompt | 사용자가 입력한 스타일 프롬프트 (선택, 최대 500자). 재생성 시 재사용 |
 | result_s3_url | 생성된 오디오 S3 URL. 완료 전에는 NULL |
 | task_id | 비동기 작업 ID (유니크) |
-| duration_seconds | 곡 길이 (초). 요청 시에는 요청한 길이, AI 완료 콜백 이후에는 AI가 보고한 실제 길이 |
+| duration_seconds | 곡 길이 (초). 요청 시에는 요청한 길이(구간 재생성은 원곡 길이), AI 완료 콜백 이후에는 AI가 보고한 실제 길이 |
+| start_time_sec | 구간 재생성 시 다시 만든 구간의 시작 (초, 부모 버전 기준). 최초 생성곡은 NULL |
+| end_time_sec | 구간 재생성 시 다시 만든 구간의 끝 (초, 부모 버전 기준). 최초 생성곡은 NULL |
 | status | `PROCESSING` / `COMPLETED` / `FAILED` / `CANCELED` |
 | created_at | 요청 시각 |
 | deleted_at | 버전 되돌리기로 무효화된 시각 (soft delete). NULL이면 유효 |

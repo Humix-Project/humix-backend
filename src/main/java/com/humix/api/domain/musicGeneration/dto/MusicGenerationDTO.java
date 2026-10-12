@@ -78,6 +78,15 @@ public class MusicGenerationDTO {
             @Schema(description = "버전 번호 (유효한 버전을 생성 순서로 센 값, 1부터)", example = "1")
             @JsonProperty("version_no") int versionNo,
 
+            @Schema(description = "이 버전에 적용된 스타일 프롬프트 (없으면 null)", example = "더 밝고 경쾌하게", nullable = true)
+            String prompt,
+
+            @Schema(description = "다시 만든 구간의 시작 시점 (초, 직전 버전 기준). 원본(최초 생성곡)이면 null", example = "10", nullable = true)
+            @JsonProperty("start_time_sec") Integer startTimeSec,
+
+            @Schema(description = "다시 만든 구간의 끝 시점 (초, 직전 버전 기준). 원본(최초 생성곡)이면 null", example = "20", nullable = true)
+            @JsonProperty("end_time_sec") Integer endTimeSec,
+
             @Schema(description = "생성된 오디오 S3 URL", example = "https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav")
             @JsonProperty("audio_url") String audioUrl,
 
@@ -91,6 +100,9 @@ public class MusicGenerationDTO {
             return new VersionItemResponse(
                     musicGeneration.getId(),
                     versionNo,
+                    musicGeneration.getPrompt(),
+                    musicGeneration.getStartTimeSec(),
+                    musicGeneration.getEndTimeSec(),
                     musicGeneration.getResultS3Url(),
                     musicGeneration.getDurationSeconds(),
                     musicGeneration.getCreatedAt()
@@ -107,14 +119,24 @@ public class MusicGenerationDTO {
             List<VersionItemResponse> versions
     ) {}
 
-    // 생성곡 프롬프트 수정 요청 Request Body
+    // 구간 재생성 요청 Request Body
     public record SongModificationRequest(
-            @Schema(description = "수정 방향 프롬프트 (예: 더 밝게, 템포를 빠르게 등)", example = "더 밝고 경쾌하게 수정해줘",
+            @Schema(description = "재생성 구간에 적용할 스타일 프롬프트 (선택, 최대 500자). 생략하거나 공백이면 수정 대상 버전의 프롬프트를 그대로 사용",
+                    example = "더 밝고 경쾌하게")
+            @Size(max = 500, message = "prompt는 최대 500자까지 입력할 수 있습니다.")
+            String prompt,
+
+            @Schema(description = "재생성할 구간의 시작 시점 (초, 수정 대상 버전 기준)", example = "10",
                     requiredMode = Schema.RequiredMode.REQUIRED)
-            @NotBlank(message = "prompt는 필수입니다.")
-            String prompt
+            @NotNull(message = "start_time_sec는 필수입니다.")
+            @JsonProperty("start_time_sec") Integer startTimeSec,
+
+            @Schema(description = "재생성할 구간의 끝 시점 (초, 수정 대상 버전 기준). 구간 길이는 최소 5초, 끝은 곡 길이 이하",
+                    example = "20", requiredMode = Schema.RequiredMode.REQUIRED)
+            @NotNull(message = "end_time_sec는 필수입니다.")
+            @JsonProperty("end_time_sec") Integer endTimeSec
     ) {
-        //프롬프트 수정곡(수정 버전) 요청 시 새로운 MusicGeneration 엔티티를 생성하는 매핑 메서드
+        //구간 재생성(수정 버전) 요청 시 새로운 MusicGeneration 엔티티를 생성하는 매핑 메서드
         public MusicGeneration from(Member member, MelodyScore melodyScore,
                                     MusicGeneration parentGeneration) {
             return MusicGeneration.builder()
@@ -124,8 +146,14 @@ public class MusicGenerationDTO {
                     .name(parentGeneration.getName() + " (수정본)")
                     .genre(parentGeneration.getGenre())
                     .atmosphere(parentGeneration.getAtmosphere())
-                    .prompt(parentGeneration.getPrompt())
+                    .prompt(hasPrompt() ? prompt : parentGeneration.getPrompt())
+                    .startTimeSec(startTimeSec)
+                    .endTimeSec(endTimeSec)
                     .build();
+        }
+
+        private boolean hasPrompt() {
+            return prompt != null && !prompt.isBlank();
         }
     }
 

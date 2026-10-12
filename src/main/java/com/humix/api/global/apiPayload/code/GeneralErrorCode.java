@@ -33,6 +33,7 @@ public enum GeneralErrorCode implements BaseErrorCode{
     // GENERATION 관련 에러
     GENERATION_NOT_FOUND(HttpStatus.NOT_FOUND, "GENERATION4000", "해당하는 생성곡이 존재하지 않습니다."),
     GENERATION_IN_PROGRESS(HttpStatus.CONFLICT, "GENERATION4001", "같은 곡의 다른 버전을 생성 중입니다. 완료되거나 취소된 후 다시 시도해주세요."),
+    INVALID_SECTION_RANGE(HttpStatus.BAD_REQUEST, "GENERATION4002", "재생성 구간이 올바르지 않습니다. 시작은 0초 이상, 구간 길이는 5초 이상이어야 하며 끝은 곡 길이를 넘을 수 없습니다."),
 
     // TASK 관련 에러
     TASK_NOT_FOUND(HttpStatus.NOT_FOUND, "TASK4000", "해당 태스크 ID의 작업 정보가 존재하지 않습니다."),

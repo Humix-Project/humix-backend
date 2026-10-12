@@ -44,15 +44,15 @@ public class GenerationController implements GenerationControllerDocs {
         return ApiResponse.onSuccess(GeneralSuccessCode.OK, result);
     }
 
-    // ⑪ 생성곡 프롬프트 수정 요청
-    @PostMapping("/{song_id}/modifications")
+    // ⑪ 생성곡 구간 재생성 요청
+    @PostMapping("/{generation_id}/modifications")
     @Override
-    public ApiResponse<MusicGenerationDTO.TaskAcceptedResponse> modifySongPrompt(
+    public ApiResponse<MusicGenerationDTO.TaskAcceptedResponse> modifySongSection(
             @AuthenticationPrincipal CustomUserDetails userDetails,
-            @PathVariable("song_id") Long songId,
+            @PathVariable("generation_id") Long generationId,
             @Valid @RequestBody MusicGenerationDTO.SongModificationRequest request) {
-        
-        MusicGenerationDTO.TaskAcceptedResponse result = musicGenerationService.modifySongPrompt(userDetails, songId, request);
+
+        MusicGenerationDTO.TaskAcceptedResponse result = musicGenerationService.modifySongSection(userDetails, generationId, request);
         return ApiResponse.onSuccess(GeneralSuccessCode.ACCEPTED, result);
     }
 

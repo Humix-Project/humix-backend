@@ -250,29 +250,7 @@ class GenerationPromptAndDurationTest {
         assertThat(statusOf(taskId)).isEqualTo(GenerationStatus.FAILED);
     }
 
-    @Test
-    void 수정곡_완료콜백은_길이를_비교하지_않고_보고된_길이를_저장한다() throws Exception {
-        Long hummingId = saveHummingWithNotes(shortNotes());
-        MelodyScore melody = melodyScoreRepository.findByHummingId(hummingId).orElseThrow();
-        Member member = memberRepository.findById(deviceId).orElseThrow();
-        MusicGeneration parent = musicGenerationRepository.save(MusicGeneration.builder()
-                .member(member).melodyScore(melody).name("원본").genre("pop").atmosphere("happy")
-                .prompt("원본 프롬프트").durationSeconds(30.0).build());
-
-        String body = postJson("/api/v1/generation/songs/" + parent.getId() + "/modifications",
-                "{\"prompt\":\"더 밝게\"}")
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value("COMMON202"))
-                .andReturn().getResponse().getContentAsString();
-        String taskId = objectMapper.readTree(body).at("/result/task_id").asText();
-
-        complete(taskId, "https://example.com/m.wav", 12.3).andExpect(status().isOk());
-
-        MusicGeneration modified = musicGenerationRepository.findByTaskId(taskId).orElseThrow();
-        assertThat(modified.getStatus()).isEqualTo(GenerationStatus.COMPLETED);
-        assertThat(modified.getDurationSeconds()).isEqualTo(12.3);
-        assertThat(modified.getPrompt()).isEqualTo("원본 프롬프트"); // 원본의 스타일 프롬프트를 이어받는다
-    }
+    // 구간 재생성(modify) 완료 콜백 검증은 SongSectionModificationTest에서 다룬다.
 
     // ---------- helpers ----------
 
