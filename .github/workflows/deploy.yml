@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main", "develop" ] # main과 develop 브랜치에 push될 때 작동
+    branches: [ "main" ] # main에 push될 때 작동
   workflow_dispatch:
 
 # 같은 서버(humix-prod)에 배포가 동시에 실행되면 컨테이너 교체 중 이름 충돌이 나므로 한 번에 하나만 실행한다.
