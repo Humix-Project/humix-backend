@@ -10,6 +10,9 @@ Humix 프로젝트의 메인 비즈니스 로직과 데이터 흐름을 총괄�
 
 ## 🏗 Architecture & Core Features
 
+### 시스템 아키텍처 다이어그램
+<img width="797" height="403" alt="image" src="https://github.com/user-attachments/assets/c15b50a0-a6e7-46f0-9530-3af538ddcb4a" />
+
 ### 1. 3-Tier 아키텍처 및 MSA 기반 워커 분리
 * `Controller - Service - Repository` 계층으로 설계되어 명확한 관심사 분리를 달성했습니다.
 * Nginx 리버스 프록시를 통해 안전하게 API 요청을 라우팅합니다.
