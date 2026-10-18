@@ -133,7 +133,8 @@ public class HummingService {
         for (MelodyScoreDTO.NoteDto rawNote : rawNotes) {
             // 시작 시간 정보를 누적 조립하여 완성형 NoteDto 객체 체인을 빌드
             MelodyScoreDTO.NoteDto orderedNote = new MelodyScoreDTO.NoteDto(
-                    Math.round(currentStartTime * 10.0) / 10.0, // 부동소수점 오차 방지 보정
+                    // 부동소수점 오차 방지 보정. 음길이가 0.01초 단위이므로 같은 단위로 맞춰야 앞 음과 겹치지 않는다
+                    Math.round(currentStartTime * 100.0) / 100.0,
                     rawNote.pitch(),
                     rawNote.durationSeconds()
             );
