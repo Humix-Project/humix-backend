@@ -9,8 +9,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -33,4 +35,15 @@ public interface MusicGenerationRepository extends JpaRepository<MusicGeneration
     int softDeleteVersionsAfter(@Param("rootGenerationId") Long rootGenerationId,
                                 @Param("generationId") Long generationId,
                                 @Param("deletedAt") LocalDateTime deletedAt);
+
+    // 콜드 스타트 측정: 끝난 작업 중 RunPod 시간이 아직 채워지지 않은 건 (RunPod가 결과를 보관하는 동안만 조회)
+    List<MusicGeneration> findTop20ByRunpodJobIdIsNotNullAndQueueDelayMsIsNullAndStatusInAndCreatedAtAfter(
+            Collection<GenerationStatus> statuses, LocalDateTime createdAfter);
+
+    @Transactional
+    @Modifying(clearAutomatically = true)
+    @Query("update MusicGeneration g set g.queueDelayMs = :queueDelayMs, g.executionMs = :executionMs where g.id = :id")
+    int updateRunpodTimings(@Param("id") Long id,
+                            @Param("queueDelayMs") Long queueDelayMs,
+                            @Param("executionMs") Long executionMs);
 }
