@@ -44,7 +44,7 @@ public class MusicGenerationService {
     // AI 서버가 업로드하는 결과 오디오용 presigned PUT URL 유효시간. RunPod 콜드스타트·대기열 + 생성 시간을 감안해 넉넉히 둔다.
     private static final Duration PRESIGNED_UPLOAD_EXPIRATION = Duration.ofMinutes(30);
 
-    // 요청/응답 길이 비교 및 허밍 길이 검증에서 허용하는 오차(초). 멜로디가 0.1초 단위로 양자화되기 때문이다.
+    // 요청/응답 길이 비교 및 허밍 길이 검증에서 허용하는 오차(초). 음길이 반올림이 쌓인 오차와 AI 출력 길이의 미세한 차이를 흡수한다.
     private static final double DURATION_TOLERANCE_SECONDS = 0.1;
     private static final double FLOAT_EPSILON = 1e-9;
 
