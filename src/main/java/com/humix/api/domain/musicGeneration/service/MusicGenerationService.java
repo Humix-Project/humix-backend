@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.humix.api.domain.melodyScore.dto.MelodyScoreDTO;
 import com.humix.api.domain.melodyScore.entity.MelodyScore;
 import com.humix.api.domain.melodyScore.repository.MelodyScoreRepository;
+import com.humix.api.domain.musicGeneration.client.RunpodClient;
 import com.humix.api.domain.musicGeneration.dto.MusicGenerationDTO;
 import com.humix.api.domain.musicGeneration.entity.MusicGeneration;
 import com.humix.api.domain.musicGeneration.repository.MusicGenerationRepository;
@@ -19,7 +20,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.reactive.function.client.WebClient;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
@@ -54,8 +54,8 @@ public class MusicGenerationService {
     private final MusicGenerationRepository musicGenerationRepository;
     private final MelodyScoreRepository melodyScoreRepository;
     private final S3Presigner s3Presigner;
-    private final WebClient.Builder webClientBuilder;
     private final ObjectMapper objectMapper;
+    private final RunpodClient runpodClient;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
@@ -65,12 +65,6 @@ public class MusicGenerationService {
 
     @Value("${cloud.aws.s3.bucket}")
     private String bucket;
-
-    @Value("${runpod.endpoint-url}")
-    private String runpodEndpointUrl;
-
-    @Value("${runpod.api-key}")
-    private String runpodApiKey;
 
     @Value("${generation.duration-seconds}")
     private int generationDurationSeconds;
@@ -110,9 +104,6 @@ public class MusicGenerationService {
             @JsonProperty("callback_url") String callbackUrl,
             @JsonProperty("presigned_url") String presignedUrl
     ) {}
-
-    // RunPod Serverless 요청 래퍼: {"input": {...}}
-    private record RunpodRequest(Object input) {}
 
     @Transactional
     public MusicGenerationDTO.TaskAcceptedResponse generateSong(CustomUserDetails userDetails,
@@ -161,17 +152,9 @@ public class MusicGenerationService {
                 presignedUrl
         );
 
-        // RunPod Serverless: POST /run with {"input": {...}} (Trailing slash treatment & relative URI)
-        String baseUrl = runpodEndpointUrl.endsWith("/") ? runpodEndpointUrl : runpodEndpointUrl + "/";
-        WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
+        // RunPod Serverless: POST /run. 응답의 작업 ID는 콜드 스타트 측정(/status 조회)에 쓴다.
         try {
-            webClient.post()
-                    .uri("run")
-                    .header("Authorization", "Bearer " + runpodApiKey)
-                    .bodyValue(new RunpodRequest(aiRequest))
-                    .retrieve()
-                    .toBodilessEntity()
-                    .block();
+            musicGeneration.recordRunpodJob(runpodClient.submit(aiRequest));
         } catch (Exception e) {
             throw new IllegalStateException("AI 서버로 노래 생성 요청을 전송하는데 실패했습니다.", e);
         }
@@ -243,17 +226,9 @@ public class MusicGenerationService {
                 presignedUrl
         );
 
-        // RunPod Serverless: POST /run with {"input": {...}} (Trailing slash treatment & relative URI)
-        String baseUrl = runpodEndpointUrl.endsWith("/") ? runpodEndpointUrl : runpodEndpointUrl + "/";
-        WebClient webClient = webClientBuilder.baseUrl(baseUrl).build();
+        // RunPod Serverless: POST /run. 응답의 작업 ID는 콜드 스타트 측정(/status 조회)에 쓴다.
         try {
-            webClient.post()
-                    .uri("run")
-                    .header("Authorization", "Bearer " + runpodApiKey)
-                    .bodyValue(new RunpodRequest(aiRequest))
-                    .retrieve()
-                    .toBodilessEntity()
-                    .block();
+            musicGeneration.recordRunpodJob(runpodClient.submit(aiRequest));
         } catch (Exception e) {
             throw new IllegalStateException("AI 서버로 구간 재생성 요청을 전송하는데 실패했습니다.", e);
         }
@@ -434,6 +409,8 @@ public class MusicGenerationService {
         log.info("[MusicGeneration] Received completion callback for taskId: {}, audioUrl: {}", taskId, request.generatedAudioUrl());
         MusicGeneration musicGeneration = musicGenerationRepository.findByTaskId(taskId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.TASK_NOT_FOUND));
+
+        musicGeneration.recordCompletedAt(LocalDateTime.now());
 
         String audioUrl = request.generatedAudioUrl();
         boolean isFailed = "FAILED".equalsIgnoreCase(audioUrl);

@@ -82,6 +82,23 @@ public class MusicGeneration {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    // ---- 콜드 스타트 측정용 ----
+    // RunPod /run 응답의 작업 ID. /status 조회에 쓴다. (task_id는 백엔드가 만든 ID라 별개)
+    @Column(name = "runpod_job_id", length = 100)
+    private String runpodJobId;
+
+    // RunPod delayTime: 요청이 큐에 들어간 뒤 워커가 처리를 시작하기까지의 시간 (콜드 스타트 포함), ms
+    @Column(name = "queue_delay_ms")
+    private Long queueDelayMs;
+
+    // RunPod executionTime: 워커가 핸들러를 실행한 시간 (모델 로드·추론·업로드), ms
+    @Column(name = "execution_ms")
+    private Long executionMs;
+
+    // 완료 콜백을 받은 시각. created_at과의 차이가 사용자가 체감하는 전체 대기 시간
+    @Column(name = "completed_at")
+    private LocalDateTime completedAt;
+
     @Builder
     public MusicGeneration(Member member, MelodyScore melodyScore, MusicGeneration parentGeneration,
                            String name, String genre, String atmosphere, String prompt, String taskId,
@@ -125,5 +142,13 @@ public class MusicGeneration {
     // 재생 시간 업데이트 메서드
     public void updateDuration(Double durationSeconds) {
         this.durationSeconds = durationSeconds;
+    }
+
+    public void recordRunpodJob(String runpodJobId) {
+        this.runpodJobId = runpodJobId;
+    }
+
+    public void recordCompletedAt(LocalDateTime completedAt) {
+        this.completedAt = completedAt;
     }
 }
