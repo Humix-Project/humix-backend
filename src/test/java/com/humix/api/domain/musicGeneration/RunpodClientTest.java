@@ -1,19 +1,26 @@
 package com.humix.api.domain.musicGeneration;
 
+import ch.qos.logback.classic.Logger;
+import ch.qos.logback.classic.spi.ILoggingEvent;
+import ch.qos.logback.core.read.ListAppender;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.humix.api.domain.musicGeneration.client.RunpodClient;
 import org.junit.jupiter.api.Test;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.reactive.function.client.ClientResponse;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 import reactor.core.publisher.Mono;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class RunpodClientTest {
 
@@ -27,6 +34,20 @@ class RunpodClientTest {
             return Mono.just(body == null ? response.build() : response.body(body).build());
         });
         return new RunpodClient(builder, new ObjectMapper(), ENDPOINT, "test-key");
+    }
+
+    // RunpodClient가 남기는 로그 메시지를 모아 돌려준다
+    private List<String> captureRunpodClientLogs(Runnable action) {
+        Logger logger = (Logger) LoggerFactory.getLogger(RunpodClient.class);
+        ListAppender<ILoggingEvent> appender = new ListAppender<>();
+        appender.start();
+        logger.addAppender(appender);
+        try {
+            action.run();
+        } finally {
+            logger.detachAppender(appender);
+        }
+        return appender.list.stream().map(ILoggingEvent::getFormattedMessage).toList();
     }
 
     @Test
@@ -46,6 +67,33 @@ class RunpodClientTest {
         RunpodClient client = clientReturning(HttpStatus.OK, null, new AtomicReference<>());
 
         assertThat(client.submit(Map.of("action", "generate"))).isNull();
+    }
+
+    @Test
+    void submit_logsStatusAndBodyWhenRunpodRejects() {
+        RunpodClient client = clientReturning(HttpStatus.CONFLICT, "{\"error\":\"endpoint is updating\"}", new AtomicReference<>());
+
+        List<String> logs = captureRunpodClientLogs(() ->
+                assertThatThrownBy(() -> client.submit(Map.of("action", "generate")))
+                        .isInstanceOf(WebClientResponseException.Conflict.class));
+
+        assertThat(logs).anySatisfy(message -> assertThat(message)
+                .contains("409")
+                .contains("endpoint is updating")
+                .doesNotContain("test-key"));
+    }
+
+    @Test
+    void submit_truncatesLongRejectionBody() {
+        RunpodClient client = clientReturning(HttpStatus.BAD_REQUEST, "x".repeat(5000), new AtomicReference<>());
+
+        List<String> logs = captureRunpodClientLogs(() ->
+                assertThatThrownBy(() -> client.submit(Map.of("action", "generate")))
+                        .isInstanceOf(WebClientResponseException.class));
+
+        assertThat(logs).anySatisfy(message -> assertThat(message)
+                .contains("...(truncated)")
+                .hasSizeLessThan(2000));
     }
 
     @Test
