@@ -7,7 +7,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.WebClientResponseException;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.Set;
@@ -23,6 +25,8 @@ public class RunpodClient {
 
     private static final Duration SUBMIT_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration STATUS_TIMEOUT = Duration.ofSeconds(5);
+    // 거절 응답 본문을 로그에 남길 최대 글자 수
+    private static final int ERROR_BODY_LOG_LIMIT = 1000;
     private static final Set<String> FINISHED_STATUSES = Set.of("COMPLETED", "FAILED", "CANCELLED", "TIMED_OUT");
 
     private final WebClient webClient;
@@ -59,13 +63,21 @@ public class RunpodClient {
      * 예외 대신 null을 반환해 생성 흐름을 막지 않는다. 이 경우 해당 건은 측정에서만 빠진다.
      */
     public String submit(Object input) {
-        String body = webClient.post()
-                .uri("run")
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
-                .bodyValue(new RunpodRequest(input))
-                .retrieve()
-                .bodyToMono(String.class)
-                .block(SUBMIT_TIMEOUT);
+        String body;
+        try {
+            body = webClient.post()
+                    .uri("run")
+                    .header(HttpHeaders.AUTHORIZATION, "Bearer " + apiKey)
+                    .bodyValue(new RunpodRequest(input))
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block(SUBMIT_TIMEOUT);
+        } catch (WebClientResponseException e) {
+            // 예외 메시지에는 상태 코드만 있어 거절 사유(응답 본문)를 따로 남긴다. 요청 헤더(API 키)와 요청 본문은 남기지 않는다.
+            log.error("[Runpod] /run 요청이 거절되었습니다. status: {}, body: {}",
+                    e.getStatusCode(), abbreviate(e.getResponseBodyAsString(StandardCharsets.UTF_8)));
+            throw e;
+        }
 
         if (body == null || body.isBlank()) {
             log.warn("[Runpod] /run 응답 본문이 비어 있어 작업 ID를 기록하지 못했습니다.");
@@ -79,6 +91,13 @@ public class RunpodClient {
             log.warn("[Runpod] /run 응답을 해석하지 못해 작업 ID를 기록하지 못했습니다. body: {}", body);
             return null;
         }
+    }
+
+    private static String abbreviate(String text) {
+        if (text == null || text.length() <= ERROR_BODY_LOG_LIMIT) {
+            return text;
+        }
+        return text.substring(0, ERROR_BODY_LOG_LIMIT) + "...(truncated)";
     }
 
     /** 작업 상태를 조회한다. 측정용이라 실패해도 예외를 던지지 않고 비어 있는 값을 돌려준다. */
