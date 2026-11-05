@@ -39,7 +39,7 @@ jwt:
     same-site: None
 
 cors:
-  allowed-origins: "https://humix.my-project.cloud, https://humix-client.vercel.app, http://localhost:3000, http://localhost:5173"  # EC2 퍼블릭, 버셀 도메인
+  allowed-origins: "https://humix.my-project.cloud, https://humix-client.vercel.app"  # EC2 퍼블릭, 버셀 도메인
 
 backend:
   url: https://humix.my-project.cloud
