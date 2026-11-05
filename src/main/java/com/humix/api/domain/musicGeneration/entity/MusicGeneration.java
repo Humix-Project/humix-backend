@@ -82,6 +82,21 @@ public class MusicGeneration {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    // ---- AI 생성 입력 스냅샷: 이 버전을 구간 재생성할 때 그대로 AI 서버로 보낸다 (#58) ----
+    // AI가 이 버전의 MusicGen에 실제로 넣은 곡 전체 멜로디 (허밍 + 확장·보정까지 끝난 값). AI 멜로디 벡터 배열 JSON.
+    // 이 기능 이전에 만든 곡이나 아직 보내지 않는 AI 서버에서는 NULL이며, 그때는 melody_score를 쓴다.
+    @Lob
+    @Column(name = "extended_melody", columnDefinition = "LONGTEXT")
+    private String extendedMelody;
+
+    // 위 멜로디에서 허밍이 끝나는 시점(초). 이후가 AI가 확장한 구간
+    @Column(name = "humming_end_seconds")
+    private Double hummingEndSeconds;
+
+    // MusicGen에 실제로 넣은 최종 텍스트 조건 (LLM 재작성 결과 등)
+    @Column(name = "text_condition", length = 1000)
+    private String textCondition;
+
     // ---- 콜드 스타트 측정용 ----
     // RunPod /run 응답의 작업 ID. /status 조회에 쓴다. (task_id는 백엔드가 만든 ID라 별개)
     @Column(name = "runpod_job_id", length = 100)
@@ -146,6 +161,13 @@ public class MusicGeneration {
 
     public void recordRunpodJob(String runpodJobId) {
         this.runpodJobId = runpodJobId;
+    }
+
+    // 완료 콜백으로 받은 생성 입력을 이 버전에 그대로 기록한다. 부모 값은 복사하지 않는다.
+    public void recordGenerationInputs(String extendedMelody, Double hummingEndSeconds, String textCondition) {
+        this.extendedMelody = extendedMelody;
+        this.hummingEndSeconds = hummingEndSeconds;
+        this.textCondition = textCondition;
     }
 
     public void recordCompletedAt(LocalDateTime completedAt) {

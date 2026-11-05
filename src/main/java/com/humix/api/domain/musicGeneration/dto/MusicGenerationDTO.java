@@ -152,7 +152,7 @@ public class MusicGenerationDTO {
                     .build();
         }
 
-        private boolean hasPrompt() {
+        public boolean hasPrompt() {
             return prompt != null && !prompt.isBlank();
         }
     }
@@ -290,6 +290,23 @@ public class MusicGenerationDTO {
             @JsonProperty("generated_audio_url") String generatedAudioUrl,
 
             // AI가 실제로 만든 오디오 길이(초). 실패 콜백이나 아직 이 필드를 보내지 않는 AI 서버에서는 null
-            @JsonProperty("duration_seconds") Double durationSeconds
+            @JsonProperty("duration_seconds") Double durationSeconds,
+
+            // 이하 #58: 이 버전을 만들 때 AI가 실제로 쓴 입력. 실패 콜백이나 아직 보내지 않는 AI 서버에서는 null
+            // MusicGen에 넣은 곡 전체 멜로디 (허밍 + 확장·보정까지 끝난 값)
+            @JsonProperty("extended_melody_vectors") List<AiMelodyVector> extendedMelodyVectors,
+
+            // 위 멜로디에서 허밍이 끝나는 시점(초)
+            @JsonProperty("humming_end_seconds") Double hummingEndSeconds,
+
+            // MusicGen에 넣은 최종 텍스트 조건
+            @JsonProperty("text_condition") String textCondition
+    ) {}
+
+    // AI 서버와 주고받는 멜로디 벡터. onset_seconds는 곡 시작 기준 절대 시점, pitch 0은 쉼표
+    public record AiMelodyVector(
+            int pitch,
+            @JsonProperty("onset_seconds") double onsetSeconds,
+            @JsonProperty("duration_seconds") double durationSeconds
     ) {}
 }
