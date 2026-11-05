@@ -49,6 +49,9 @@ erDiagram
         varchar(20) status
         datetime created_at
         datetime deleted_at "nullable"
+        longtext extended_melody "nullable, AI가 쓴 곡 전체 멜로디"
+        double humming_end_seconds "nullable"
+        varchar(1000) text_condition "nullable"
     }
 ```
 
@@ -105,6 +108,14 @@ AI 음악 생성 결과. 구간 재생성하면 원본을 바꾸지 않고 `pare
 | status | `PROCESSING` / `COMPLETED` / `FAILED` / `CANCELED` |
 | created_at | 요청 시각 |
 | deleted_at | 버전 되돌리기로 무효화된 시각 (soft delete). NULL이면 유효 |
+| extended_melody | 이 버전을 만들 때 AI가 MusicGen에 넣은 곡 전체 멜로디. 허밍 뒤를 AI가 이어 쓰고 음역·레가토 보정까지 끝낸 값으로, AI 멜로디 벡터 배열 JSON (`pitch`, `onset_seconds`, `duration_seconds`, `pitch` 0은 쉼표). 완료 콜백의 `extended_melody_vectors`를 그대로 저장. 이 버전을 구간 재생성할 때 `melody_vectors`로 보냄 |
+| humming_end_seconds | 위 멜로디에서 허밍이 끝나는 시점 (초). 이후가 AI가 확장한 구간. `melody_score`에서 계산하지 않고 생성 시점의 값을 저장 |
+| text_condition | 이 버전을 만들 때 MusicGen에 넣은 최종 텍스트 (LLM이 영어로 재작성한 설명, 최대 1000자) |
+
+**생성 입력 정책** (`extended_melody`, `humming_end_seconds`, `text_condition`)
+- 최초 생성·구간 재생성 모두 완료 콜백으로 받은 값을 **그 버전의 행에** 저장한다. 부모 값을 복사하지 않는다 (구간 재생성에서 확장 구간 멜로디를 다시 뽑으면 그 버전부터 멜로디가 달라짐)
+- 구간 재생성 요청에는 수정 대상 버전(`parent`)의 값을 보낸다. root 값이나 `melody_score`의 현재 값이 아니다 (곡을 만든 뒤 편집기에서 멜로디를 고쳐도 원곡과 어긋나지 않게)
+- 실패한 작업, 이 기능 전에 만든 곡, 새 필드를 보내지 않는 AI 서버에서는 NULL. `extended_melody`가 NULL인 버전을 재생성하면 지금처럼 `melody_score`를 보낸다. 백필하지 않는다
 
 **버전 정책**
 - 유효한 버전 = 같은 `root_generation_id` 중 `status = COMPLETED AND deleted_at IS NULL`

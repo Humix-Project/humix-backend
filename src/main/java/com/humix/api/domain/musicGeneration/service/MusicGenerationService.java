@@ -9,6 +9,7 @@ import com.humix.api.domain.melodyScore.entity.MelodyScore;
 import com.humix.api.domain.melodyScore.repository.MelodyScoreRepository;
 import com.humix.api.domain.musicGeneration.client.RunpodClient;
 import com.humix.api.domain.musicGeneration.dto.MusicGenerationDTO;
+import com.humix.api.domain.musicGeneration.dto.MusicGenerationDTO.AiMelodyVector;
 import com.humix.api.domain.musicGeneration.entity.MusicGeneration;
 import com.humix.api.domain.musicGeneration.repository.MusicGenerationRepository;
 import com.humix.api.domain.musicGeneration.type.GenerationStatus;
@@ -51,6 +52,9 @@ public class MusicGenerationService {
     // 구간 재생성에서 허용하는 최소 구간 길이(초). 최대는 원곡 길이(전체 재생성 가능)
     private static final int MIN_SECTION_SECONDS = 5;
 
+    // music_generation.text_condition 컬럼 길이
+    private static final int TEXT_CONDITION_MAX_LENGTH = 1000;
+
     private final MusicGenerationRepository musicGenerationRepository;
     private final MelodyScoreRepository melodyScoreRepository;
     private final S3Presigner s3Presigner;
@@ -72,12 +76,6 @@ public class MusicGenerationService {
     // Concurrent map to keep track of active SSE Emitters
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
 
-    private record AiMelodyVector(
-            int pitch,
-            @JsonProperty("onset_seconds") double onsetSeconds,
-            @JsonProperty("duration_seconds") double durationSeconds
-    ) {}
-
     private record AiGenerationRequest(
             String action,
             @JsonProperty("task_id") String taskId,
@@ -91,13 +89,18 @@ public class MusicGenerationService {
     ) {}
 
     // 구간 재생성(modify) 요청. 구간 자르기·문맥 선택·크로스페이드·병합은 AI 서버가 맡고, duration_seconds는 보내지 않는다.
+    // melody_vectors·humming_end_seconds·text_condition은 수정 대상 버전이 생성될 때 AI가 쓴 값이다 (#58).
     private record AiModificationRequest(
             String action,
             @JsonProperty("task_id") String taskId,
             @JsonProperty("melody_vectors") List<AiMelodyVector> melodyVectors,
+            @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("humming_end_seconds") Double hummingEndSeconds,
             String genre,
             String mood,
             @JsonInclude(JsonInclude.Include.NON_NULL) String prompt,
+            @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("text_condition") String textCondition,
+            // 이번 요청에 사용자가 직접 입력한 프롬프트만. prompt는 비어 있으면 부모 값으로 채워져서 새 입력인지 구분할 수 없다.
+            @JsonInclude(JsonInclude.Include.NON_NULL) @JsonProperty("edit_prompt") String editPrompt,
             @JsonProperty("source_audio_url") String sourceAudioUrl,
             @JsonProperty("section_start_seconds") int sectionStartSeconds,
             @JsonProperty("section_end_seconds") int sectionEndSeconds,
@@ -203,8 +206,12 @@ public class MusicGenerationService {
         musicGeneration.updateDuration(parentGeneration.getDurationSeconds());
         musicGenerationRepository.save(musicGeneration);
 
-        // 6. Melody Vectors 파싱 (곡 전체 분량, 원곡 기준 시점 그대로)
-        List<AiMelodyVector> melodyVectors = parseMelodyVectors(melodyScore.getNotesData());
+        // 6. Melody Vectors (곡 전체 분량, 원곡 기준 시점 그대로)
+        // 수정 대상 버전이 생성될 때 AI가 쓴 멜로디를 우선한다. 곡을 만든 뒤 편집기에서 melody_score가 바뀌어도 원곡과 어긋나지 않게 하고,
+        // 구간 재생성으로 확장 멜로디가 바뀐 버전이면 그 멜로디를 이어 쓴다. 이 값이 없는 기존 곡만 melody_score를 쓴다.
+        List<AiMelodyVector> melodyVectors = parentGeneration.getExtendedMelody() != null
+                ? parseAiMelodyVectors(parentGeneration.getExtendedMelody())
+                : parseMelodyVectors(melodyScore.getNotesData());
 
         // 7. AI 서버로 비동기 구간 재생성 요청
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
@@ -216,9 +223,12 @@ public class MusicGenerationService {
                 "modify",
                 taskId,
                 melodyVectors,
+                parentGeneration.getHummingEndSeconds(),
                 musicGeneration.getGenre(),
                 musicGeneration.getAtmosphere(),
                 musicGeneration.getPrompt(),
+                parentGeneration.getTextCondition(),
+                request.hasPrompt() ? request.prompt() : null,
                 parentGeneration.getResultS3Url(),
                 request.startTimeSec(),
                 request.endTimeSec(),
@@ -428,6 +438,7 @@ public class MusicGenerationService {
             if (request.durationSeconds() != null) {
                 musicGeneration.updateDuration(request.durationSeconds());
             }
+            recordGenerationInputs(taskId, musicGeneration, request);
         }
 
         SseEmitter emitter = emitters.remove(taskId);
@@ -518,6 +529,36 @@ public class MusicGenerationService {
     // 부동소수점 오차 때문에 경계값(예: 정확히 0.1초 차이)이 잘못 거부되지 않도록 아주 작은 보정값을 둔다.
     private static boolean exceedsTolerance(double deviationSeconds) {
         return deviationSeconds > DURATION_TOLERANCE_SECONDS + FLOAT_EPSILON;
+    }
+
+    // 생성 입력 기록이 실패해도 곡 완료는 막지 않는다. 기록이 없으면 다음 재생성은 기존 곡처럼 melody_score로 대체된다.
+    private void recordGenerationInputs(String taskId, MusicGeneration musicGeneration,
+                                        MusicGenerationDTO.AiTaskCompletionRequest request) {
+        String extendedMelody = null;
+        if (request.extendedMelodyVectors() != null && !request.extendedMelodyVectors().isEmpty()) {
+            try {
+                extendedMelody = objectMapper.writeValueAsString(request.extendedMelodyVectors());
+            } catch (IOException e) {
+                log.warn("[MusicGeneration] Failed to serialize extended melody for taskId: {}: {}", taskId, e.getMessage());
+            }
+        }
+
+        String textCondition = request.textCondition();
+        if (textCondition != null && textCondition.length() > TEXT_CONDITION_MAX_LENGTH) {
+            log.warn("[MusicGeneration] text_condition for taskId: {} exceeds {} chars ({}). Not storing it.",
+                    taskId, TEXT_CONDITION_MAX_LENGTH, textCondition.length());
+            textCondition = null;
+        }
+
+        musicGeneration.recordGenerationInputs(extendedMelody, request.hummingEndSeconds(), textCondition);
+    }
+
+    private List<AiMelodyVector> parseAiMelodyVectors(String extendedMelody) {
+        try {
+            return objectMapper.readValue(extendedMelody, new TypeReference<List<AiMelodyVector>>() {});
+        } catch (IOException e) {
+            throw new IllegalStateException("저장된 확장 멜로디를 파싱하는데 실패했습니다.", e);
+        }
     }
 
     private List<AiMelodyVector> parseMelodyVectors(String notesData) {
