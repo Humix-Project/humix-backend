@@ -30,6 +30,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -236,7 +237,7 @@ class GenerationVersionTest {
                 .andExpect(jsonPath("$.result.versions.length()").value(2))
                 .andExpect(jsonPath("$.result.versions[0].generation_id").value(v1.getId()))
                 .andExpect(jsonPath("$.result.versions[0].version_no").value(1))
-                .andExpect(jsonPath("$.result.versions[0].audio_url").exists())
+                .andExpect(jsonPath("$.result.versions[0].audio_url").value(containsString("X-Amz-Signature=")))
                 .andExpect(jsonPath("$.result.versions[1].generation_id").value(v5.getId()))
                 .andExpect(jsonPath("$.result.versions[1].version_no").value(2));
     }

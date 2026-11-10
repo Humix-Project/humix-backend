@@ -6,6 +6,7 @@ import com.humix.api.domain.musicGeneration.repository.MusicGenerationRepository
 import com.humix.api.domain.musicGeneration.type.GenerationStatus;
 import com.humix.api.global.apiPayload.ApiResponse;
 import com.humix.api.global.apiPayload.code.GeneralSuccessCode;
+import com.humix.api.global.AwsS3.service.AudioUrlSigner;
 import com.humix.api.global.security.userdetails.CustomUserDetails;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -24,6 +25,7 @@ import java.util.stream.Collectors;
 public class MeController implements MeControllerDocs {
 
     private final MusicGenerationRepository musicGenerationRepository;
+    private final AudioUrlSigner audioUrlSigner;
 
     @GetMapping("/songs")
     @Override
@@ -51,7 +53,8 @@ public class MeController implements MeControllerDocs {
                 .map(song -> {
                     double hummingDuration = song.getMelodyScore().getHumming().getDurationSeconds();
                     double duration = song.getDurationSeconds() != null ? song.getDurationSeconds() : 30.0;
-                    return MusicGenerationDTO.SongItemResponse.of(song, hummingDuration, duration);
+                    return MusicGenerationDTO.SongItemResponse.of(song, hummingDuration, duration,
+                            audioUrlSigner.forPlayback(song.getResultS3Url()));
                 })
                 .collect(Collectors.toList());
 

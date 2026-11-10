@@ -302,7 +302,7 @@ public interface GenerationControllerDocs {
                                             "        \"prompt\": null,\n" +
                                             "        \"start_time_sec\": null,\n" +
                                             "        \"end_time_sec\": null,\n" +
-                                            "        \"audio_url\": \"https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav\",\n" +
+                                            "        \"audio_url\": \"https://humix-bucket.s3.ap-northeast-2.amazonaws.com/audio/abc123_variation.wav?X-Amz-Expires=3600&X-Amz-Signature=...\",\n" +
                                             "        \"duration_seconds\": 30.0,\n" +
                                             "        \"created_at\": \"2026-06-21T18:00:00\"\n" +
                                             "      },\n" +
@@ -312,7 +312,7 @@ public interface GenerationControllerDocs {
                                             "        \"prompt\": \"더 밝고 경쾌하게\",\n" +
                                             "        \"start_time_sec\": 10,\n" +
                                             "        \"end_time_sec\": 20,\n" +
-                                            "        \"audio_url\": \"https://humix-bucket.s3.amazonaws.com/audio/def456_variation.wav\",\n" +
+                                            "        \"audio_url\": \"https://humix-bucket.s3.ap-northeast-2.amazonaws.com/audio/def456_variation.wav?X-Amz-Expires=3600&X-Amz-Signature=...\",\n" +
                                             "        \"duration_seconds\": 30.0,\n" +
                                             "        \"created_at\": \"2026-06-21T18:05:00\"\n" +
                                             "      }\n" +

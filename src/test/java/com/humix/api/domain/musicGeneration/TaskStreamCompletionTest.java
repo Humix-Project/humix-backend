@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import java.util.UUID;
 
+import static com.humix.api.global.AwsS3.PresignedUrlAssertions.assertPresignedGet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -66,7 +67,8 @@ class TaskStreamCompletionTest {
         assertThat(result.path("song_id").asLong()).isEqualTo(root.getId());
         assertThat(result.path("root_generation_id").asLong()).isEqualTo(root.getId());
         assertThat(result.path("task_id").asText()).isEqualTo(root.getTaskId());
-        assertThat(result.path("audio_url").asText()).isEqualTo(root.getResultS3Url());
+        assertPresignedGet(result.path("audio_url").asText(),
+                root.getResultS3Url().substring("https://example.com/".length()), 3600);
         assertThat(result.path("duration_seconds").asDouble()).isEqualTo(30.0);
     }
 
@@ -103,7 +105,7 @@ class TaskStreamCompletionTest {
 
         assertThat(result.path("song_id").asLong()).isEqualTo(child.getId());
         assertThat(result.path("root_generation_id").asLong()).isEqualTo(root.getId());
-        assertThat(result.path("audio_url").asText()).isEqualTo("https://example.com/callback.wav");
+        assertPresignedGet(result.path("audio_url").asText(), "callback.wav", 3600);
     }
 
     // ---------- helpers ----------

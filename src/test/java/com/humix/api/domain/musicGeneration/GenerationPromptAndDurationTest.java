@@ -35,6 +35,7 @@ import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -197,7 +198,10 @@ class GenerationPromptAndDurationTest {
         // 내 곡 목록 응답의 duration_seconds는 소수 그대로 내려간다.
         mockMvc.perform(get("/api/v1/me/songs").header("Authorization", bearer))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.result.contents[0].duration_seconds").value(29.95));
+                .andExpect(jsonPath("$.result.contents[0].duration_seconds").value(29.95))
+                // 목록의 audio_url도 서명 없는 raw URL이 아니라 presigned GET URL이어야 재생된다.
+                .andExpect(jsonPath("$.result.contents[0].audio_url").value(containsString("/a.wav?X-Amz-")))
+                .andExpect(jsonPath("$.result.contents[0].audio_url").value(containsString("X-Amz-Signature=")));
     }
 
     @Test
