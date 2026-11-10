@@ -15,6 +15,7 @@ import com.humix.api.domain.musicGeneration.repository.MusicGenerationRepository
 import com.humix.api.domain.musicGeneration.type.GenerationStatus;
 import com.humix.api.global.apiPayload.code.GeneralErrorCode;
 import com.humix.api.global.apiPayload.exception.GeneralException;
+import com.humix.api.global.AwsS3.service.AudioUrlSigner;
 import com.humix.api.global.security.userdetails.CustomUserDetails;
 import lombok.extern.slf4j.Slf4j;
 import lombok.RequiredArgsConstructor;
@@ -58,6 +59,7 @@ public class MusicGenerationService {
     private final MusicGenerationRepository musicGenerationRepository;
     private final MelodyScoreRepository melodyScoreRepository;
     private final S3Presigner s3Presigner;
+    private final AudioUrlSigner audioUrlSigner;
     private final ObjectMapper objectMapper;
     private final RunpodClient runpodClient;
 
@@ -229,7 +231,7 @@ public class MusicGenerationService {
                 musicGeneration.getPrompt(),
                 parentGeneration.getTextCondition(),
                 request.hasPrompt() ? request.prompt() : null,
-                parentGeneration.getResultS3Url(),
+                audioUrlSigner.forAiServer(parentGeneration.getResultS3Url()), // 서명 없는 URL은 private 버킷에서 403
                 request.startTimeSec(),
                 request.endTimeSec(),
                 callbackUrl,
@@ -288,7 +290,8 @@ public class MusicGenerationService {
         // versionNo는 컬럼 없이 조회 순서로 계산한다 (되돌리기로 번호가 비는 일이 없도록)
         List<MusicGenerationDTO.VersionItemResponse> items = new ArrayList<>();
         for (int i = 0; i < versions.size(); i++) {
-            items.add(MusicGenerationDTO.VersionItemResponse.of(versions.get(i), i + 1));
+            items.add(MusicGenerationDTO.VersionItemResponse.of(versions.get(i), i + 1,
+                    audioUrlSigner.forPlayback(versions.get(i).getResultS3Url())));
         }
         return new MusicGenerationDTO.VersionListResponse(rootGenerationId, items);
     }
@@ -323,7 +326,7 @@ public class MusicGenerationService {
                         taskId,
                         musicGeneration.getId(),
                         musicGeneration.getRootGenerationId(),
-                        musicGeneration.getResultS3Url(),
+                        audioUrlSigner.forPlayback(musicGeneration.getResultS3Url()),
                         musicGeneration.getDurationSeconds()
                 );
                 MusicGenerationDTO.CompletionStreamResponse completeResponse = new MusicGenerationDTO.CompletionStreamResponse(
@@ -455,7 +458,7 @@ public class MusicGenerationService {
                             taskId,
                             musicGeneration.getId(),
                             musicGeneration.getRootGenerationId(),
-                            audioUrl,
+                            audioUrlSigner.forPlayback(audioUrl),
                             musicGeneration.getDurationSeconds()
                     );
                     MusicGenerationDTO.CompletionStreamResponse completeResponse = new MusicGenerationDTO.CompletionStreamResponse(

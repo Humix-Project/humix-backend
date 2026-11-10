@@ -37,8 +37,10 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static com.humix.api.global.AwsS3.PresignedUrlAssertions.assertPresignedGet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.containsString;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -131,7 +133,7 @@ class SongSectionModificationTest {
         JsonNode input = onlyAiRequest().path("input");
         assertThat(input.path("action").asText()).isEqualTo("modify");
         assertThat(input.path("task_id").asText()).isEqualTo(taskId);
-        assertThat(input.path("source_audio_url").asText()).isEqualTo(SOURCE_URL);
+        assertPresignedGet(input.path("source_audio_url").asText(), "source.wav", 1800);
         assertThat(input.path("section_start_seconds").asInt()).isEqualTo(10);
         assertThat(input.path("section_end_seconds").asInt()).isEqualTo(20);
         assertThat(input.path("prompt").asText()).isEqualTo("더 밝게");
@@ -184,7 +186,7 @@ class SongSectionModificationTest {
         String taskId = startModification(v2, null, 5, 15);
 
         JsonNode input = onlyAiRequest().path("input");
-        assertThat(input.path("source_audio_url").asText()).isEqualTo("https://example.com/v2.wav");
+        assertPresignedGet(input.path("source_audio_url").asText(), "v2.wav", 1800);
         assertThat(input.path("prompt").asText()).isEqualTo("v2 프롬프트");
         MusicGeneration v3 = musicGenerationRepository.findByTaskId(taskId).orElseThrow();
         assertThat(v3.getRootGenerationId()).isEqualTo(source.getId());
@@ -364,7 +366,8 @@ class SongSectionModificationTest {
                 .andExpect(jsonPath("$.result.versions[1].prompt").value("더 밝게"))
                 .andExpect(jsonPath("$.result.versions[1].start_time_sec").value(10))
                 .andExpect(jsonPath("$.result.versions[1].end_time_sec").value(20))
-                .andExpect(jsonPath("$.result.versions[1].audio_url").value("https://example.com/v2.wav"));
+                .andExpect(jsonPath("$.result.versions[1].audio_url").value(containsString("/v2.wav?X-Amz-")))
+                .andExpect(jsonPath("$.result.versions[1].audio_url").value(containsString("X-Amz-Signature=")));
     }
 
     @Test

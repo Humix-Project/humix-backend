@@ -87,7 +87,7 @@ public class MusicGenerationDTO {
             @Schema(description = "다시 만든 구간의 끝 시점 (초, 직전 버전 기준). 원본(최초 생성곡)이면 null", example = "20", nullable = true)
             @JsonProperty("end_time_sec") Integer endTimeSec,
 
-            @Schema(description = "생성된 오디오 S3 URL", example = "https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav")
+            @Schema(description = "생성된 오디오 재생용 presigned URL (1시간 유효, 만료되면 다시 조회)", example = "https://humix-bucket.s3.ap-northeast-2.amazonaws.com/audio/abc123_variation.wav?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&X-Amz-Signature=...")
             @JsonProperty("audio_url") String audioUrl,
 
             @Schema(description = "생성된 오디오 재생 시간 (초)", example = "30")
@@ -96,14 +96,15 @@ public class MusicGenerationDTO {
             @Schema(description = "생성 일시", example = "2026-06-21T18:00:00")
             @JsonProperty("created_at") LocalDateTime createdAt
     ) {
-        public static VersionItemResponse of(MusicGeneration musicGeneration, int versionNo) {
+        // audioUrl은 호출부에서 서명한 재생용 presigned URL (DB의 resultS3Url은 서명 없는 URL이라 그대로 내보내면 403)
+        public static VersionItemResponse of(MusicGeneration musicGeneration, int versionNo, String audioUrl) {
             return new VersionItemResponse(
                     musicGeneration.getId(),
                     versionNo,
                     musicGeneration.getPrompt(),
                     musicGeneration.getStartTimeSec(),
                     musicGeneration.getEndTimeSec(),
-                    musicGeneration.getResultS3Url(),
+                    audioUrl,
                     musicGeneration.getDurationSeconds(),
                     musicGeneration.getCreatedAt()
             );
@@ -181,7 +182,7 @@ public class MusicGenerationDTO {
                     example = "40", nullable = true)
             @JsonProperty("root_generation_id") Long rootGenerationId,
 
-            @Schema(description = "생성된 오디오 S3 URL", example = "https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav")
+            @Schema(description = "생성된 오디오 재생용 presigned URL (1시간 유효, 만료되면 다시 조회)", example = "https://humix-bucket.s3.ap-northeast-2.amazonaws.com/audio/abc123_variation.wav?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&X-Amz-Signature=...")
             @JsonProperty("audio_url") String audioUrl,
 
             @Schema(description = "생성된 오디오 재생 시간 (초)", example = "30.0")
@@ -233,22 +234,23 @@ public class MusicGenerationDTO {
             @Schema(description = "생성된 오디오 재생 시간 (초)", example = "30.0")
             @JsonProperty("duration_seconds") double durationSeconds,
 
-            @Schema(description = "생성된 오디오 S3 URL", example = "https://humix-bucket.s3.amazonaws.com/audio/abc123_variation.wav")
+            @Schema(description = "생성된 오디오 재생용 presigned URL (1시간 유효, 만료되면 다시 조회)", example = "https://humix-bucket.s3.ap-northeast-2.amazonaws.com/audio/abc123_variation.wav?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Expires=3600&X-Amz-Signature=...")
             @JsonProperty("audio_url") String audioUrl,
 
             @Schema(description = "생성 일시", example = "2026-06-21T18:00:00")
             @JsonProperty("created_at") LocalDateTime createdAt
     ) {
         //엔티티와 외부 조회 데이터를 조합하여 목록용 단일 객체로 변환하는 메서드
+        // audioUrl은 호출부에서 서명한 재생용 presigned URL
         public static SongItemResponse of(MusicGeneration musicGeneration, double hummingDuration,
-                                          double durationSeconds) {
+                                          double durationSeconds, String audioUrl) {
             return new SongItemResponse(
                     musicGeneration.getId(),
                     musicGeneration.getName(), //엔티티의 name을 title 필드로 매핑
                     musicGeneration.getGenre(),
                     hummingDuration,           //Humming 데이터에서 조회한 값
                     durationSeconds,          //AI 생성 후 오디오 재생 시간
-                    musicGeneration.getResultS3Url(),
+                    audioUrl,
                     musicGeneration.getCreatedAt()
             );
         }

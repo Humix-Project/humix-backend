@@ -35,6 +35,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.CopyOnWriteArrayList;
 
+import static com.humix.api.global.AwsS3.PresignedUrlAssertions.assertPresignedGet;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -280,7 +281,9 @@ class GenerationInputSnapshotTest {
         assertThat(input.path("humming_end_seconds").asDouble()).isEqualTo(12.5);
         assertThat(input.path("text_condition").asText()).isEqualTo(TEXT_B);
         assertThat(input.path("edit_prompt").asText()).isEqualTo("더 밝게");
-        assertThat(input.path("source_audio_url").asText()).isEqualTo(v2.getResultS3Url());
+        // 수정 대상 버전(v2)의 결과 key를 가리키는 AI 서버용 presigned GET URL
+        assertPresignedGet(input.path("source_audio_url").asText(),
+                v2.getResultS3Url().substring("https://example.com/".length()), 1800);
     }
 
     @Test
