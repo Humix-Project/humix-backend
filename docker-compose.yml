@@ -39,6 +39,7 @@ services:
       - AI_GENERATION_SERVER_URL=${AI_GENERATION_SERVER_URL}
       - RUNPOD_ENDPOINT_URL=${RUNPOD_ENDPOINT_URL}
       - RUNPOD_API_KEY=${RUNPOD_API_KEY}
+      - GEMINI_API_KEY=${GEMINI_API_KEY}
     depends_on:
       humix-db:
         condition: service_healthy
