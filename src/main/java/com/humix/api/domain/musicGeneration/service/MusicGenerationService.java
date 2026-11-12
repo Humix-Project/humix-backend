@@ -75,8 +75,21 @@ public class MusicGenerationService {
     @Value("${generation.duration-seconds}")
     private int generationDurationSeconds;
 
+    // SseEmitter 타임아웃은 총 시간이라 이벤트를 보내도 늘어나지 않는다. 길게 잡고, 실제 대기 한도는 마지막 소식 이후 시간(stream.idle-timeout-ms)으로 잰다. (#64)
+    @Value("${generation.stream.emitter-timeout-ms:1800000}")
+    private long emitterTimeoutMs;
+
+    @Value("${generation.stream.idle-timeout-ms:120000}")
+    private long idleTimeoutMs;
+
     // Concurrent map to keep track of active SSE Emitters
     private final Map<String, SseEmitter> emitters = new ConcurrentHashMap<>();
+
+    // 구독 중인 작업의 마지막 소식 시각(epoch ms)과 마지막으로 전달한 단계. emitter와 함께 인스턴스 메모리에만 둔다. (#64)
+    private final Map<String, Long> lastActivity = new ConcurrentHashMap<>();
+    private final Map<String, String> lastStage = new ConcurrentHashMap<>();
+
+    public static final String STAGE_IN_QUEUE = "IN_QUEUE";
 
     private record AiGenerationRequest(
             String action,
@@ -87,7 +100,8 @@ public class MusicGenerationService {
             @JsonInclude(JsonInclude.Include.NON_NULL) String prompt,
             @JsonProperty("duration_seconds") int durationSeconds,
             @JsonProperty("callback_url") String callbackUrl,
-            @JsonProperty("presigned_url") String presignedUrl
+            @JsonProperty("presigned_url") String presignedUrl,
+            @JsonProperty("progress_url") String progressUrl
     ) {}
 
     // 구간 재생성(modify) 요청. 구간 자르기·문맥 선택·크로스페이드·병합은 AI 서버가 맡고, duration_seconds는 보내지 않는다.
@@ -107,7 +121,8 @@ public class MusicGenerationService {
             @JsonProperty("section_start_seconds") int sectionStartSeconds,
             @JsonProperty("section_end_seconds") int sectionEndSeconds,
             @JsonProperty("callback_url") String callbackUrl,
-            @JsonProperty("presigned_url") String presignedUrl
+            @JsonProperty("presigned_url") String presignedUrl,
+            @JsonProperty("progress_url") String progressUrl
     ) {}
 
     @Transactional
@@ -142,6 +157,7 @@ public class MusicGenerationService {
 
         // 6. AI 서버로 비동기 작곡 요청
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
+        String progressUrl = progressUrl(taskId);
         
         log.info("[MusicGeneration] Requesting song generation for taskId: {}, genre: {}, mood: {}, duration: {}s, callback: {}", taskId, request.genre(), request.mood(), generationDurationSeconds, callbackUrl);
 
@@ -154,7 +170,8 @@ public class MusicGenerationService {
                 musicGeneration.getPrompt(),
                 generationDurationSeconds,
                 callbackUrl,
-                presignedUrl
+                presignedUrl,
+                progressUrl
         );
 
         // RunPod Serverless: POST /run. 응답의 작업 ID는 콜드 스타트 측정(/status 조회)에 쓴다.
@@ -217,6 +234,7 @@ public class MusicGenerationService {
 
         // 7. AI 서버로 비동기 구간 재생성 요청
         String callbackUrl = backendUrl + "/api/v1/internal/tasks/" + taskId + "/completion";
+        String progressUrl = progressUrl(taskId);
 
         log.info("[MusicGeneration] Requesting section modification for taskId: {}, sourceGenerationId: {}, section: {}~{}s, prompt: {}, callback: {}",
                 taskId, parentGeneration.getId(), request.startTimeSec(), request.endTimeSec(), musicGeneration.getPrompt(), callbackUrl);
@@ -235,7 +253,8 @@ public class MusicGenerationService {
                 request.startTimeSec(),
                 request.endTimeSec(),
                 callbackUrl,
-                presignedUrl
+                presignedUrl,
+                progressUrl
         );
 
         // RunPod Serverless: POST /run. 응답의 작업 ID는 콜드 스타트 측정(/status 조회)에 쓴다.
@@ -296,6 +315,10 @@ public class MusicGenerationService {
         return new MusicGenerationDTO.VersionListResponse(rootGenerationId, items);
     }
 
+    private String progressUrl(String taskId) {
+        return backendUrl + "/api/v1/internal/tasks/" + taskId + "/progress";
+    }
+
     private void requireLogin(CustomUserDetails userDetails) {
         if (userDetails == null || userDetails.getMember() == null) {
             throw new GeneralException(GeneralErrorCode.LOGIN_REQUIRED);
@@ -314,7 +337,7 @@ public class MusicGenerationService {
         MusicGeneration musicGeneration = musicGenerationRepository.findByTaskId(taskId)
                 .orElseThrow(() -> new GeneralException(GeneralErrorCode.TASK_NOT_FOUND));
                 
-        SseEmitter emitter = new SseEmitter(1000 * 60 * 5L); // 5분 타임아웃
+        SseEmitter emitter = new SseEmitter(emitterTimeoutMs);
         
         // 2. 만약 이미 완료된 상태라면 즉시 완료 이벤트 전송 후 종료
         if (musicGeneration.getStatus() == GenerationStatus.COMPLETED) {
@@ -360,6 +383,7 @@ public class MusicGenerationService {
 
         // 4. 아직 진행 중인 경우(PROCESSING)에만 emitters 맵에 등록하고 콜백 대기
         emitters.put(taskId, emitter);
+        lastActivity.putIfAbsent(taskId, System.currentTimeMillis()); // 재구독으로 유휴 시간이 초기화되지 않게 처음 값만 둔다
         log.info("[MusicGeneration] Registered SseEmitter for active taskId: {}. Total active emitters: {}", taskId, emitters.size());
 
         emitter.onCompletion(() -> {
@@ -392,6 +416,101 @@ public class MusicGenerationService {
         }
 
         return emitter;
+    }
+
+    /**
+     * AI 서버의 단계별 진행 보고(#64)를 SSE progress 이벤트로 전달한다.
+     * 진행 중(PROCESSING)이 아니거나 없는 작업의 보고는 무시한다. AI 서버가 재시도하지 않도록 오류로 응답하지 않는다.
+     */
+    public void receiveProgress(String taskId, MusicGenerationDTO.AiTaskProgressRequest request) {
+        GenerationStatus status = musicGenerationRepository.findByTaskId(taskId)
+                .map(MusicGeneration::getStatus)
+                .orElse(null);
+        if (status != GenerationStatus.PROCESSING) {
+            log.info("[MusicGeneration] Ignoring progress report for taskId: {} (status: {})", taskId, status);
+            return;
+        }
+
+        int progress = request.progress() == null ? 0 : Math.max(0, Math.min(100, request.progress()));
+        String stage = request.stage();
+        log.info("[MusicGeneration] Progress report for taskId: {}, stage: {}, progress: {}", taskId, stage, progress);
+
+        touch(taskId);
+        if (stage != null) {
+            lastStage.put(taskId, stage);
+        }
+        sendProgress(taskId, new MusicGenerationDTO.ProgressStreamResponse(taskId, "PROCESSING", progress, stage));
+    }
+
+    /** RunPod 대기열에 있음을 한 번만 알린다. 이미 단계가 전달된 작업(진행 보고가 시작됐거나 이미 알림)은 보내지 않는다. */
+    public void notifyQueued(String taskId) {
+        if (lastStage.putIfAbsent(taskId, STAGE_IN_QUEUE) == null) {
+            sendProgress(taskId, new MusicGenerationDTO.ProgressStreamResponse(taskId, "PROCESSING", 0, STAGE_IN_QUEUE));
+        }
+    }
+
+    /** 작업이 아직 살아 있다는 소식(진행 보고, RunPod 상태 확인)을 기록해 유휴 시간을 초기화한다. */
+    public void touch(String taskId) {
+        if (emitters.containsKey(taskId)) {
+            lastActivity.put(taskId, System.currentTimeMillis());
+        }
+    }
+
+    public boolean isIdleExpired(String taskId) {
+        Long last = lastActivity.get(taskId);
+        return last != null && System.currentTimeMillis() - last > idleTimeoutMs;
+    }
+
+    /** SSE로 구독 중인 작업 ID들의 스냅샷 */
+    public List<String> activeTaskIds() {
+        return List.copyOf(emitters.keySet());
+    }
+
+    /** emitter가 이미 닫힌 작업의 추적 정보를 정리한다. */
+    public void pruneTracking() {
+        lastActivity.keySet().removeIf(taskId -> !emitters.containsKey(taskId));
+        lastStage.keySet().removeIf(taskId -> !emitters.containsKey(taskId));
+    }
+
+    /**
+     * 진행 중인 작업을 실패 처리하고 SSE로 알린다. RunPod가 실패로 끝냈거나 한동안 소식이 없을 때 쓴다.
+     * 이미 끝난 작업이면 아무것도 하지 않는다.
+     */
+    @Transactional
+    public void failTask(String taskId, String reason) {
+        MusicGeneration musicGeneration = musicGenerationRepository.findByTaskId(taskId).orElse(null);
+        if (musicGeneration == null || musicGeneration.getStatus() != GenerationStatus.PROCESSING) {
+            return;
+        }
+        log.warn("[MusicGeneration] Marking taskId: {} as FAILED. reason: {}", taskId, reason);
+        musicGeneration.recordCompletedAt(LocalDateTime.now());
+        musicGeneration.updateStatus(GenerationStatus.FAILED, null);
+
+        SseEmitter emitter = emitters.remove(taskId);
+        if (emitter != null) {
+            try {
+                emitter.send(SseEmitter.event().name("progress").data(
+                        new MusicGenerationDTO.ProgressStreamResponse(taskId, "FAILED", 0)
+                ));
+                emitter.complete();
+            } catch (Exception e) {
+                log.warn("[MusicGeneration] Failed to send FAILED event for taskId: {}: {}", taskId, e.getMessage());
+            }
+        }
+    }
+
+    // 연결이 끊긴 emitter로는 보내지 않고 정리한다.
+    private void sendProgress(String taskId, MusicGenerationDTO.ProgressStreamResponse payload) {
+        SseEmitter emitter = emitters.get(taskId);
+        if (emitter == null) {
+            return;
+        }
+        try {
+            emitter.send(SseEmitter.event().name("progress").data(payload));
+        } catch (Exception e) {
+            log.warn("[MusicGeneration] Failed to send progress to SseEmitter for taskId: {}: {}", taskId, e.getMessage());
+            emitters.remove(taskId);
+        }
     }
 
     @Transactional

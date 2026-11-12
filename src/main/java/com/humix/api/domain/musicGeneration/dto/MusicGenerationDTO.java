@@ -1,5 +1,6 @@
 package com.humix.api.domain.musicGeneration.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.humix.api.domain.melodyScore.entity.MelodyScore;
 import com.humix.api.domain.member.entity.Member;
@@ -167,7 +168,22 @@ public class MusicGenerationDTO {
             String status,
 
             @Schema(description = "진행률 (0~100)", example = "50")
-            int progress
+            int progress,
+
+            @Schema(description = "현재 처리 단계. IN_QUEUE(RunPod 대기) → LOADING_MODEL → EXTENDING_MELODY(생성만) → GENERATING → UPLOADING. 단계 정보가 없는 이벤트에서는 생략",
+                    example = "GENERATING", nullable = true)
+            @JsonInclude(JsonInclude.Include.NON_NULL) String stage
+    ) {
+        public ProgressStreamResponse(String taskId, String status, int progress) {
+            this(taskId, status, progress, null);
+        }
+    }
+
+    // AI 서버 진행 보고 콜백 Request Body (#64)
+    public record AiTaskProgressRequest(
+            @JsonProperty("status") String status,
+            @JsonProperty("stage") String stage,
+            @JsonProperty("progress") Integer progress
     ) {}
 
     //SSE Event: complete 내부 result 데이터 구조
