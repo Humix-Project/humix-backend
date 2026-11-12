@@ -25,4 +25,14 @@ public class InternalController {
         musicGenerationService.completeTask(taskId, request);
         return ApiResponse.onSuccess(GeneralSuccessCode.OK, null);
     }
+
+    @Operation(summary = "AI 서버 진행 상황 콜백 API", description = "AI 서버가 단계마다 보내는 진행 상황을 수신해 SSE progress 이벤트로 전달합니다. 진행 중(PROCESSING)이 아닌 작업의 보고는 무시합니다.")
+    @PostMapping("/{task_id}/progress")
+    public ApiResponse<Object> reportProgress(
+            @PathVariable("task_id") String taskId,
+            @RequestBody MusicGenerationDTO.AiTaskProgressRequest request) {
+
+        musicGenerationService.receiveProgress(taskId, request);
+        return ApiResponse.onSuccess(GeneralSuccessCode.OK, null);
+    }
 }
